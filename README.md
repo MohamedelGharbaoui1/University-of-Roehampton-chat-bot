@@ -1,558 +1,373 @@
-# AI Multi-Document Assistant - Complete Code Explanation
+# University of Roehampton Chatbot - Refactored
 
-## Overview
-This is a sophisticated Streamlit web application that allows users to chat with multiple documents (PDF and DOCX) using AI, featuring audio responses and multi-language support.
+A modular, intelligent academic assistant for University of Roehampton students, providing coursework support and ethics guidance through a guided conversation interface.
 
-## Key Features
-- **Multi-document processing**: Reads PDF and Word documents
-- **AI-powered chat**: Uses OpenAI's GPT model for intelligent responses
-- **Audio responses**: Text-to-speech functionality with multiple voice options
-- **Multi-language support**: Interface supports multiple languages with RTL support
-- **Document analytics**: Displays statistics about loaded documents
+## 🏗️ Architecture Overview
 
----
+The application has been refactored into modular components for better maintainability and understanding:
 
-## 1. Imports and Dependencies
-
-```python
-import streamlit as st
-from openai import OpenAI
-from PyPDF2 import PdfReader
-from docx import Document
-# ... other imports
+```
+├── main.py                 # Main application entry point
+├── config.py              # Configuration management
+├── session_manager.py     # Session state management
+├── database_manager.py    # Student database operations
+├── document_processor.py  # Document reading and processing
+├── ai_assistant.py        # AI response generation
+├── audio_manager.py       # Text-to-speech functionality
+├── ui_components.py       # UI components and styling
+├── conversation_flows.py  # Conversation flow management
+├── localization.py        # Multi-language support
+├── ethics_handler.py      # Ethics-specific functionality
+└── requirements.txt       # Python dependencies
 ```
 
-**Purpose**: 
-- `streamlit`: Web framework for the user interface
-- `openai`: API client for AI responses and text-to-speech
-- `PyPDF2`: PDF document processing
-- `python-docx`: Word document processing
-- `pathlib`: File system operations
-- Custom `localization` module for multi-language support
+## 📦 Module Descriptions
 
----
+### Core Modules
 
-## 2. Configuration Class
+#### `ai_assistant.py`
 
-```python
-class Config:
-    PROJECT_NAME = "AI Multi-Document Assistant"
-    COMPANY_NAME = "Powered by AI"
-    DATA_FOLDER = "data"
-    AUDIO_FOLDER = "audio_responses"
-    MAX_TOKENS = 1500
-    TEMPERATURE = 0.3
-    MODEL = "gpt-3.5-turbo"
-    # ... more settings
+- OpenAI API integration
+- Coursework response generation
+- Ethics guidance responses
+- System prompt management
+
+#### `audio_manager.py`
+
+- Text-to-speech functionality
+- Audio response generation
+- Voice selection and testing
+- Audio player HTML generation
+
+#### `ui_components.py`
+
+- UI component rendering
+- CSS styling and theming
+- Logo handling
+- Welcome screen and sidebar
+
+#### `conversation_flows.py`
+
+- Screen rendering logic
+- User input handling
+- Navigation between steps
+- Chat interface management
+
+#### `localization.py`
+
+- Multi-language support
+- Translation management
+- RTL language handling
+- Language-specific prompts
+
+#### `ethics_handler.py`
+
+- Ethics document processing
+- Ethics-specific chat interface
+- Reforming Modernity integration
+- Ethics response generation
+
+## 🚀 Quick Start
+
+### 1. Installation
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd university-chatbot
+
+# Install dependencies
+pip install -r requirements.txt
 ```
 
-**Purpose**: Centralized configuration management
-- **File settings**: Where to find documents, audio storage
-- **AI settings**: Model parameters, token limits
-- **Voice settings**: Available voices for text-to-speech
-- **UI settings**: Supported file types, content limits
+### 2. Configuration
 
----
+Create a `.env` file in the project root:
 
-## 3. OpenAI Client Initialization
-
-```python
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-if OPENAI_API_KEY:
-    client = OpenAI(api_key=OPENAI_API_KEY)
-else:
-    client = None
+```env
+OPENAI_API_KEY=your_openai_api_key_here
 ```
 
-**Purpose**: 
-- Loads API key from environment variables
-- Creates OpenAI client for AI and TTS services
-- Handles missing API key gracefully
+### 3. Directory Structure
 
----
+Create the following directories:
 
-## 4. Document Processing Functions
+```
+project-root/
+├── data/                           # Student documents
+│   ├── reforming_modernity.pdf    # Ethics document
+│   └── [student-pdfs]             # Coursework documents
+├── assets/                        # Static assets
+│   └── logo.png                   # University logo
+├── translations/                  # Language files (auto-generated)
+└── audio_responses/              # Audio cache (auto-generated)
+```
 
-### PDF Reading (`read_pdf`)
+### 4. Student Database
+
+Create `student_modules_with_pdfs.xlsx` with columns:
+
+- Student ID
+- Code
+- Programme
+- Module
+- PDF File
+
+Example:
+| Student ID | Code | Programme | Module | PDF File |
+|------------|------|-----------|--------|----------|
+| A00034131 | 1234 | Computer Science | Machine Learning | ml_coursework1.pdf |
+| A00034131 | 1234 | Computer Science | Machine Learning | ml_coursework2.pdf |
+
+### 5. Run the Application
+
+```bash
+streamlit run main.py
+```
+
+## 🔧 Configuration Options
+
+### Environment Variables
+
+```env
+# Required
+OPENAI_API_KEY=your_key_here
+
+# Optional (defaults provided)
+MODEL=gpt-3.5-turbo
+MAX_TOKENS=1500
+TEMPERATURE=0.3
+```
+
+### Config Class Settings
+
+Modify `config.py` to customize:
+
+- File paths and folders
+- OpenAI model settings
+- UI configuration
+- Supported file types
+- Audio voices
+
+## 🌟 Features
+
+### Student Authentication
+
+- Secure student ID and code validation
+- Module access control
+- Programme-specific content
+
+### Multi-Document Support
+
+- PDF and DOCX processing
+- Multiple documents per module
+- Combined document analysis
+
+### Ethics Guidance
+
+- Reforming Modernity document integration
+- Ethics-specific responses
+- University policy guidance
+
+### Audio Accessibility
+
+- Multiple voice options
+- Text-to-speech responses
+- Audio player integration
+
+### Multi-Language Support
+
+- English, Arabic, French, Spanish
+- RTL language support
+- Localized interface
+
+### Responsive Design
+
+- Mobile-friendly interface
+- Modern Roehampton branding
+- Accessible components
+
+## 🛠️ Development
+
+### Adding New Languages
+
+1. Update `localization.py`:
+
 ```python
-def read_pdf(file_path: Path) -> Tuple[Optional[str], Dict[str, Any]]:
-    reader = PdfReader(str(file_path))
-    text = ""
-    total_pages = len(reader.pages)
-    
-    for page_num, page in enumerate(reader.pages):
-        page_text = page.extract_text()
-        if page_text and page_text.strip():
-            text += f"\n--- Page {page_num + 1} ---\n"
-            text += page_text
-    
-    metadata = {
-        'total_pages': total_pages,
-        'file_size': file_path.stat().st_size,
-        'file_type': 'PDF',
-        'word_count': len(text.split()) if text else 0,
-        'character_count': len(text),
+def _get_new_language_translations(self) -> Dict[str, str]:
+    return {
+        'app_title': 'Translation here',
+        # ... more translations
     }
-    
-    return text, metadata
 ```
 
-**Purpose**:
-- Extracts text from PDF files page by page
-- Handles extraction errors gracefully
-- Returns both content and metadata (pages, size, word count)
+2. Add to language options:
 
-### DOCX Reading (`read_docx`)
 ```python
-def read_docx(file_path: Path) -> Tuple[Optional[str], Dict[str, Any]]:
-    # Method 1: python-docx extraction
-    doc = Document(str(file_path))
-    text_parts = []
-    
-    # Extract paragraphs with formatting
-    for paragraph in doc.paragraphs:
-        para_text = paragraph.text.strip()
-        if para_text:
-            if paragraph.style.name.startswith('Heading'):
-                text_parts.append(f"\n## {para_text}\n")
-            else:
-                text_parts.append(para_text)
-    
-    # Extract tables
-    for table in doc.tables:
-        # ... table processing
-    
-    # Fallback methods if primary extraction fails
-    # Method 2: mammoth library
-    # Method 3: XML extraction
-```
-
-**Purpose**:
-- Multiple extraction methods for better compatibility
-- Preserves document structure (headings, tables)
-- Extracts headers, footers, and table content
-- Fallback mechanisms for difficult documents
-
----
-
-## 5. Audio Response System
-
-### Audio Generation (`generate_audio_response`)
-```python
-def generate_audio_response(text: str, voice: str = None) -> Optional[bytes]:
-    clean_text = clean_text_for_tts(text)
-    selected_voice = voice or st.session_state.get('selected_voice', Config.TTS_VOICE)
-    
-    response = client.audio.speech.create(
-        model=Config.TTS_MODEL,
-        voice=selected_voice,
-        input=clean_text,
-        response_format="mp3"
-    )
-    
-    return response.content
-```
-
-**Purpose**:
-- Converts AI responses to speech using OpenAI's TTS
-- Supports multiple voice options
-- Cleans text for better audio quality
-
-### Text Cleaning for TTS (`clean_text_for_tts`)
-```python
-def clean_text_for_tts(text: str) -> str:
-    # Remove markdown formatting
-    text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)  # **bold**
-    text = re.sub(r'\*(.*?)\*', r'\1', text)      # *italic*
-    
-    # Remove headers, code blocks, links
-    text = re.sub(r'^#+\s*', '', text, flags=re.MULTILINE)
-    text = re.sub(r'```.*?```', '', text, flags=re.DOTALL)
-    
-    # Remove emojis and special characters
-    text = re.sub(r'[🔑📄📚⚠️❌✅🤖🙋📊💾⏱️🔧🗑️🔄🔍🚨📁]', '', text)
-```
-
-**Purpose**:
-- Removes markdown formatting that sounds bad in speech
-- Eliminates emojis and special characters
-- Ensures proper sentence structure for TTS
-
-### Audio Player Creation (`create_audio_player`)
-```python
-def create_audio_player(audio_bytes: bytes, key: str = None) -> str:
-    audio_base64 = base64.b64encode(audio_bytes).decode()
-    
-    audio_html = f"""
-    <div class="audio-player-container">
-        <div class="audio-controls" style="...">
-            <div style="...">🔊 Audio Response</div>
-            <audio controls>
-                <source src="data:audio/mp3;base64,{audio_base64}" type="audio/mpeg">
-            </audio>
-        </div>
-    </div>
-    """
-    return audio_html
-```
-
-**Purpose**:
-- Creates HTML audio player with custom styling
-- Embeds audio data directly in the HTML
-- Provides accessible audio controls
-
----
-
-## 6. Document Loading System
-
-### Main Loading Function (`load_all_documents`)
-```python
-@st.cache_data(show_spinner=False)
-def load_all_documents() -> Tuple[Dict[str, Dict], str, Dict[str, Any]]:
-    data_path = Path(Config.DATA_FOLDER)
-    documents = {}
-    
-    # Find all supported files
-    supported_files = []
-    for ext in Config.SUPPORTED_EXTENSIONS:
-        found_files = list(data_path.glob(f"*{ext}"))
-        supported_files.extend(found_files)
-    
-    # Process each file
-    for file_path in supported_files:
-        if file_path.suffix.lower() == '.pdf':
-            content, metadata = read_pdf(file_path)
-        elif file_path.suffix.lower() == '.docx':
-            content, metadata = read_docx(file_path)
-        
-        if content and content.strip():
-            documents[file_path.name] = {
-                'content': content,
-                'metadata': metadata,
-                'file_path': str(file_path)
-            }
-    
-    return documents, status_message, total_metadata
-```
-
-**Purpose**:
-- Scans data folder for supported documents
-- Processes all files and collects metadata
-- Uses Streamlit caching for performance
-- Returns comprehensive statistics
-
----
-
-## 7. AI Search and Response System
-
-### Document Search (`search_documents`)
-```python
-def search_documents(question: str, documents: Dict[str, Dict]) -> str:
-    # Handle greetings in multiple languages
-    greetings = {
-        'en': ['hello', 'hi', 'hey'],
-        'ar': ['مرحبا', 'أهلا', 'السلام عليكم'],
-        'fr': ['bonjour', 'salut'],
-        'es': ['hola', 'buenos días']
+def get_language_options(self) -> Dict[str, str]:
+    return {
+        'new_lang': '🇫🇷 New Language Name',
+        # ... existing languages
     }
-    
-    # Prepare document content
-    combined_content = ""
-    for doc_name, doc_data in documents.items():
-        content = doc_data['content'][:Config.MAX_CONTENT_LENGTH // len(documents)]
-        doc_section = f"\n\n=== DOCUMENT: {doc_name} ===\n{content}\n=== END OF {doc_name} ==="
-        combined_content += doc_section
-    
-    # Get AI response
-    response = client.chat.completions.create(
-        model=Config.MODEL,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": question}
-        ],
-        max_tokens=Config.MAX_TOKENS,
-        temperature=Config.TEMPERATURE,
-    )
-    
-    return response.choices[0].message.content.strip()
 ```
 
-**Purpose**:
-- Combines content from all documents
-- Handles multi-language greetings
-- Creates context-aware AI prompts
-- Manages API errors gracefully
+### Adding New Conversation Flows
 
----
+1. Create new methods in `conversation_flows.py`
+2. Add step to session manager
+3. Update main application router
 
-## 8. User Interface Components
+### Customizing AI Responses
 
-### Sidebar (`render_sidebar`)
+Modify prompt templates in `ai_assistant.py`:
+
+- `_create_coursework_system_prompt()`
+- `_create_ethics_system_prompt()`
+
+### Adding New Document Types
+
+1. Extend `document_processor.py`
+2. Add to `SUPPORTED_EXTENSIONS` in config
+3. Implement new reading methods
+
+## 📱 Usage Guide
+
+### For Students
+
+1. **Select Path**: Choose between Ethics or Coursework assistance
+2. **Authentication**: Enter Student ID and access code
+3. **Module Selection**: Choose your module and documents
+4. **Coursework Type**: Select type of help needed
+5. **Chat**: Ask questions about your materials
+
+### For Administrators
+
+1. **Student Data**: Maintain Excel file with student information
+2. **Documents**: Add PDF/DOCX files to data folder
+3. **Ethics**: Ensure reforming_modernity.pdf is available
+4. **Monitoring**: Check logs for usage and errors
+
+## 🔍 Troubleshooting
+
+### Common Issues
+
+**Database not loading:**
+
+- Check Excel file format and column names
+- Verify file permissions
+- Check for special characters in data
+
+**Documents not found:**
+
+- Ensure files are in `data/` folder
+- Check file names in Excel match actual files
+- Verify file permissions
+
+**Audio not working:**
+
+- Check OpenAI API key
+- Verify internet connection
+- Try different voice options
+
+**Styling issues:**
+
+- Clear browser cache
+- Check CSS conflicts
+- Verify Streamlit version
+
+### Debug Mode
+
+Enable detailed logging by setting in `config.py`:
+
 ```python
-def render_sidebar() -> None:
-    with st.sidebar:
-        # Language selector
-        render_language_selector()
-        
-        # Voice settings
-        render_voice_selector()
-        
-        # Document library info
-        if st.session_state.documents_loaded:
-            # Display statistics
-            st.markdown(f"""
-            <div class="sidebar-info">
-                <div class="info-item">
-                    <span class="info-label">📁 Total Files:</span>
-                    <span class="info-value">{total_meta['successful_loads']}</span>
-                </div>
-                <!-- More stats -->
-            </div>
-            """, unsafe_allow_html=True)
-        
-        # Control buttons
-        if st.button("🗑️ Clear Chat"):
-            st.session_state.messages = []
-            st.rerun()
+logging.basicConfig(level=logging.DEBUG)
 ```
 
-**Purpose**:
-- Language selection interface
-- Voice settings and audio controls
-- Document statistics display
-- Chat management controls
+View session state information in sidebar debug panel.
 
-### Voice Selector (`render_voice_selector`)
+## 📋 API Reference
+
+### Key Classes
+
+#### `SessionManager`
+
 ```python
-def render_voice_selector():
-    # Audio toggle
-    audio_enabled = st.checkbox("🔊 Enable Audio Responses", value=True)
-    st.session_state.audio_enabled = audio_enabled
-    
-    if audio_enabled:
-        # Voice selection dropdown
-        selected_voice = st.selectbox(
-            "🎭 Select Voice", 
-            options=voice_options,
-            format_func=lambda x: Config.SUPPORTED_VOICES[x]
-        )
-        
-        # Test voice button
-        if st.button("🎵 Test Voice"):
-            test_text = "Hello! This is how I will sound."
-            audio_bytes = generate_audio_response(test_text, selected_voice)
-            if audio_bytes:
-                audio_html = create_audio_player(audio_bytes)
-                st.markdown(audio_html, unsafe_allow_html=True)
+SessionManager.initialize_session_state()
+SessionManager.reset_conversation()
+SessionManager.is_authenticated() -> bool
 ```
 
-**Purpose**:
-- Toggle audio responses on/off
-- Select from multiple voice options
-- Test voice before using
-- Accessibility features
+#### `DatabaseManager`
 
-### Chat Interface (`render_chat_interface`)
 ```python
-def render_chat_interface() -> None:
-    # Header
-    st.markdown(f"""
-    <div class="main-header">
-        <h1>📚 AI Multi-Document Assistant</h1>
-        <p>Chat with your documents • Powered by AI • 🔊 Audio Enabled</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Display messages
-    for i, message in enumerate(st.session_state.messages):
-        if message["role"] == "user":
-            # User message display
-        else:
-            # AI response with audio player
-            st.markdown(message["content"])
-            
-            # Add audio if enabled
-            if st.session_state.get('audio_enabled', True):
-                if message_key not in st.session_state.audio_responses:
-                    audio_bytes = generate_audio_response(message["content"])
-                    st.session_state.audio_responses[message_key] = audio_bytes
-                
-                audio_html = create_audio_player(audio_bytes)
-                st.markdown(audio_html, unsafe_allow_html=True)
+DatabaseManager.load_student_database() -> Tuple[Dict, str]
+DatabaseManager.validate_student_credentials(id, code) -> Tuple[bool, Dict, str]
 ```
 
-**Purpose**:
-- Displays chat header with branding
-- Shows conversation history
-- Generates and displays audio for AI responses
-- Handles empty state with instructions
+#### `AIAssistant`
 
----
-
-## 9. Styling and CSS
-
-### Enhanced CSS (`get_enhanced_css`)
 ```python
-def get_enhanced_css() -> str:
-    base_css = """
-    <style>
-        /* Import fonts for multi-language support */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300;400;500;600;700&display=swap');
-        
-        /* Theme variables */
-        :root {
-            --primary-color: #1f2937;
-            --secondary-color: #3b82f6;
-            --success-color: #10b981;
-            /* ... more variables */
-        }
-        
-        /* Chat message styling */
-        .chat-message {
-            padding: 1.5rem;
-            border-radius: 12px;
-            margin-bottom: 1.5rem;
-            box-shadow: var(--shadow);
-        }
-        
-        /* Audio player styling */
-        .audio-controls {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 25px;
-            padding: 12px 20px;
-        }
-        
-        /* RTL support for Arabic */
-        [lang="ar"], .arabic-text {
-            font-family: 'Noto Sans Arabic', 'Arial', 'Tahoma', sans-serif !important;
-            text-align: right !important;
-        }
-    </style>
-    """
+ai_assistant.generate_coursework_response(question, content, module_info) -> str
+ai_assistant.generate_ethics_response(question, content, student_info) -> str
 ```
 
-**Purpose**:
-- Modern, responsive design
-- Multi-language font support
-- RTL (right-to-left) text support
-- Custom audio player styling
-- Accessible color schemes
+#### `AudioManager`
 
----
-
-## 10. Main Application Flow
-
-### Main Function (`main`)
 ```python
-def main() -> None:
-    try:
-        # Initialize session state and language
-        initialize_session_state()
-        
-        # Create necessary folders
-        create_audio_folder()
-        
-        # Apply CSS styling
-        st.markdown(get_enhanced_css(), unsafe_allow_html=True)
-        
-        # Render UI components
-        render_sidebar()
-        render_chat_interface()
-        handle_user_input()
-        
-    except Exception as e:
-        logger.error(f"Application error: {e}")
-        st.error(f"Application Error: {str(e)}")
+audio_manager.generate_audio_response(text, voice) -> Optional[bytes]
+audio_manager.create_audio_player(audio_bytes, key) -> str
 ```
 
-**Purpose**:
-- Orchestrates the entire application
-- Handles initialization
-- Manages error handling
-- Coordinates UI rendering
+## 🤝 Contributing
 
-### Input Handling (`handle_user_input`)
-```python
-def handle_user_input() -> None:
-    if prompt := st.chat_input("Search your documents..."):
-        # Add user message
-        st.session_state.messages.append({
-            "role": "user", 
-            "content": prompt,
-            "timestamp": time.time()
-        })
-        
-        # Generate AI response
-        with st.spinner("Searching documents..."):
-            response = search_documents(prompt, st.session_state.documents)
-        
-        # Add AI response
-        st.session_state.messages.append({
-            "role": "assistant", 
-            "content": response,
-            "timestamp": time.time()
-        })
-        
-        # Pre-generate audio
-        if st.session_state.get('audio_enabled', True):
-            audio_bytes = generate_audio_response(response)
-            if audio_bytes:
-                st.session_state.audio_responses[message_key] = audio_bytes
-        
-        st.rerun()
-```
+1. Fork the repository
+2. Create a feature branch
+3. Follow the modular architecture
+4. Add tests for new functionality
+5. Update documentation
+6. Submit a pull request
 
-**Purpose**:
-- Captures user input
-- Manages conversation state
-- Generates AI responses
-- Pre-generates audio for better UX
+## 📄 License
 
----
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Key Technologies and Libraries Used
+## 🆘 Support
 
-1. **Streamlit**: Web framework for rapid UI development
-2. **OpenAI API**: 
-   - GPT models for intelligent responses
-   - TTS (Text-to-Speech) for audio generation
-3. **PyPDF2**: PDF document processing
-4. **python-docx**: Word document processing
-5. **pathlib**: Modern file system operations
-6. **logging**: Application monitoring and debugging
-7. **base64**: Audio data encoding for HTML embedding
-8. **regex**: Text cleaning and processing
+For technical support:
 
----
+- Check the troubleshooting section
+- Review application logs
+- Contact system administrator
 
-## Architecture Overview
+For feature requests:
 
-```
-User Input → Document Processing → AI Analysis → Response Generation → Audio Generation → UI Display
-     ↓              ↓                   ↓              ↓                    ↓              ↓
-Chat Interface → PDF/DOCX Readers → OpenAI GPT → Text Response → OpenAI TTS → Audio Player
-```
+- Create an issue in the repository
+- Provide detailed requirements
+- Include use case examplesconfig.py`
+- Centralized configuration management
+- Environment variable handling
+- Validation functions
+- Constants and settings
 
-## Security and Best Practices
+#### `session_manager.py`
 
-1. **Environment Variables**: API keys stored securely
-2. **Error Handling**: Comprehensive try-catch blocks
-3. **Input Validation**: User input sanitization
-4. **Caching**: Efficient document loading
-5. **Logging**: Detailed application monitoring
-6. **Accessibility**: Audio responses for vision-impaired users
+- Streamlit session state initialization
+- State management utilities
+- Conversation flow tracking
+- Session reset functionality
 
----
+#### `database_manager.py`
 
-## Summary
+- Student database loading from Excel
+- Credential validation
+- Module and coursework data access
+- Database statistics
 
-This application demonstrates a sophisticated integration of:
-- **Document processing** (PDF, DOCX)
-- **AI-powered search** (OpenAI GPT)
-- **Text-to-speech** (OpenAI TTS)
-- **Multi-language support** (Internationalization)
-- **Modern web UI** (Streamlit with custom CSS)
-- **Accessibility features** (Audio responses, RTL support)
+#### `document_processor.py`
 
-The code is well-structured, modular, and follows best practices for maintainability and scalability. It provides a complete solution for document-based AI assistance with advanced accessibility features.
+- PDF and DOCX document reading
+- Content extraction and metadata
+- Multi-document handling
+- Document preview generation
+
+#### `
