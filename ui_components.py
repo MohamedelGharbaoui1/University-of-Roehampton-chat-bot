@@ -1,4 +1,4 @@
-# ui_components.py - UI components and styling
+# ui_components.py - UI components and styling with translation support
 
 import base64
 import streamlit as st
@@ -12,7 +12,7 @@ from audio_manager import AudioManager
 logger = logging.getLogger(__name__)
 
 class UIComponents:
-    """Handles UI components and styling for the University Chatbot"""
+    """Handles UI components and styling for the University Chatbot with translation support"""
     
     def __init__(self, audio_manager: AudioManager):
         self.audio_manager = audio_manager
@@ -46,7 +46,7 @@ class UIComponents:
     
     @staticmethod
     def get_enhanced_css() -> str:
-        """Get enhanced CSS with official Roehampton University brand colors"""
+        """Get enhanced CSS with official Roehampton University brand colors and RTL support"""
         base_css = """
         <style>
             /* Import Google Fonts */
@@ -86,6 +86,7 @@ class UIComponents:
                 font-family: 'Noto Sans Arabic', 'Arial', 'Tahoma', sans-serif !important;
                 line-height: 1.8 !important;
                 text-align: right !important;
+                direction: rtl;
             }
             
             /* Roehampton University Branded Header */
@@ -232,6 +233,15 @@ class UIComponents:
                 background: linear-gradient(90deg, var(--roehampton-green), var(--roehampton-light-green));
             }
             
+            /* Language selector styling */
+            .language-info {
+                background: var(--background-white);
+                padding: 1rem;
+                border-radius: 8px;
+                border-left: 4px solid var(--roehampton-green);
+                margin-bottom: 1rem;
+            }
+            
             /* Responsive design */
             @media (max-width: 768px) {
                 .roehampton-header h1 {
@@ -255,15 +265,15 @@ class UIComponents:
         return base_css + rtl_css
     
     def render_voice_selector(self):
-        """Render voice selector in sidebar"""
-        st.markdown(f"### 🎤 {t('voice_settings', default='Voice Settings')}")
+        """Render voice selector in sidebar with translation support"""
+        st.markdown(f"### 🎤 {t('voice_settings')}")
         
         # Audio toggle
         current_audio_state = st.session_state.get('audio_enabled', True)
         audio_enabled = st.checkbox(
-            f"🔊 {t('enable_audio', default='Enable Audio Responses')}", 
+            f"🔊 {t('enable_audio')}", 
             value=current_audio_state,
-            help=t('audio_help', default='Toggle audio responses for accessibility')
+            help=t('audio_help')
         )
         st.session_state.audio_enabled = audio_enabled
         
@@ -279,73 +289,78 @@ class UIComponents:
                 current_index = 0
             
             selected_voice = st.selectbox(
-                f"🎭 {t('select_voice', default='Select Voice')}", 
+                f"🎭 {t('select_voice')}", 
                 options=voice_options,
                 format_func=lambda x: Config.SUPPORTED_VOICES[x],
                 index=current_index,
-                help=t('voice_help', default='Choose the voice for audio responses')
+                help=t('voice_help')
             )
             
             st.session_state.selected_voice = selected_voice
             
             # Test voice button
-            if st.button(f"🎵 {t('test_voice', default='Test Voice')}", type="secondary"):
+            if st.button(f"🎵 {t('test_voice')}", type="secondary"):
                 if self.audio_manager.is_available():
-                    with st.spinner(t('generating_audio', default='Generating audio...')):
+                    with st.spinner(t('generating_audio')):
                         audio_bytes = self.audio_manager.test_voice(selected_voice)
                         
                     if audio_bytes:
                         audio_html = self.audio_manager.create_audio_player(audio_bytes, key="voice_test")
                         st.markdown(audio_html, unsafe_allow_html=True)
-                        st.success(t('audio_ready', default='Audio ready!'))
+                        st.success(t('audio_ready'))
                     else:
-                        st.error(t('audio_error', default='Failed to generate audio'))
+                        st.error(t('audio_error'))
                 else:
-                    st.error("Audio service not available")
+                    st.error(t('ai_service_unavailable'))
         else:
-            st.info(t('audio_disabled', default='Audio responses are disabled'))
+            st.info(t('audio_disabled'))
     
     def render_welcome_screen(self):
-        """Render welcome screen with official Roehampton University branding"""
+        """Render welcome screen with translation support"""
         logo_base64 = self.load_logo_from_assets()
+        
+        # Get translated content
+        app_title = t('app_title')
+        app_subtitle = t('app_subtitle')
+        welcome_message = t('welcome_message')
         
         if logo_base64:
             st.markdown(f"""
-            <div class="roehampton-header">
+            <div class="roehampton-header" {f'lang="{language_manager.current_language}"' if language_manager.current_language != 'en' else ''}>
                 <div class="logo-title-container">
                     <img src="data:image/png;base64,{logo_base64}" alt="University of Roehampton Logo" class="roehampton-logo">
                     <div>
-                        <h1>University Assistant</h1>
+                        <h1>{app_title}</h1>
                     </div>
                 </div>
-                <p>Your intelligent academic companion for coursework and ethics guidance</p>
+                <p>{app_subtitle}</p>
             </div>
             """, unsafe_allow_html=True)
         else:
-            st.markdown("""
-            <div class="roehampton-header">
-                <h1>🎓 University of Roehampton Assistant</h1>
-                <p>Your intelligent academic companion for coursework and ethics guidance</p>
+            st.markdown(f"""
+            <div class="roehampton-header" {f'lang="{language_manager.current_language}"' if language_manager.current_language != 'en' else ''}>
+                <h1>🎓 {app_title}</h1>
+                <p>{app_subtitle}</p>
             </div>
             """, unsafe_allow_html=True)
         
-        st.markdown("### How can I help you today?")
+        st.markdown(f"### {welcome_message}")
         
         col1, col2 = st.columns(2)
         
         with col1:
-            if st.button("📋 Ethics Document Help", 
-                        help="Get assistance with ethics-related documents and guidelines",
+            if st.button(f"📋 {t('ethics_document_help')}", 
+                        help=t('ethics_help_desc'),
                         use_container_width=True,
                         type="primary",
                         key="welcome_ethics_btn"):
                 st.session_state.selected_path = 'ethics'
-                st.session_state.conversation_step = 'student_id'
+                st.session_state.conversation_step = 'ethics_chat'
                 st.rerun()
         
         with col2:
-            if st.button("📚 University Coursework Help", 
-                        help="Get help with your specific coursework materials",
+            if st.button(f"📚 {t('coursework_help')}", 
+                        help=t('coursework_help_desc'),
                         use_container_width=True,
                         type="primary",
                         key="welcome_coursework_btn"):
@@ -353,46 +368,37 @@ class UIComponents:
                 st.session_state.conversation_step = 'student_id'
                 st.rerun()
         
-        # Feature highlights
+        # Feature highlights with translations
         st.markdown("---")
-        st.markdown("""
-        <div class="feature-grid">
+        feature_grid_lang = f'lang="{language_manager.current_language}"' if language_manager.current_language != 'en' else ''
+        st.markdown(f"""
+        <div class="feature-grid" {feature_grid_lang}>
             <div class="feature-card">
                 <div class="feature-icon">📋</div>
-                <div class="feature-title">Ethics Guidance</div>
-                <div class="feature-description">Access comprehensive ethics guidance based on university policies and the "Reforming Modernity" framework</div>
+                <div class="feature-title">{t('feature_ethics_title')}</div>
+                <div class="feature-description">{t('feature_ethics_desc')}</div>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">📚</div>
-                <div class="feature-title">Coursework Support</div>
-                <div class="feature-description">Get personalized help with your module materials, assignments, and academic questions</div>
+                <div class="feature-title">{t('feature_coursework_title')}</div>
+                <div class="feature-description">{t('feature_coursework_desc')}</div>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">🔐</div>
-                <div class="feature-title">Secure Access</div>
-                <div class="feature-description">Student authentication ensures you only access your own academic materials and information</div>
+                <div class="feature-title">{t('feature_secure_title')}</div>
+                <div class="feature-description">{t('feature_secure_desc')}</div>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">🎤</div>
-                <div class="feature-title">Audio Support</div>
-                <div class="feature-description">Listen to responses with text-to-speech functionality for enhanced accessibility</div>
+                <div class="feature-title">{t('feature_audio_title')}</div>
+                <div class="feature-description">{t('feature_audio_desc')}</div>
             </div>
         </div>
         """, unsafe_allow_html=True)
-        
-        # Additional information
-        st.markdown("---")
-        st.markdown("""
-        **What you can do:**
-        - 📋 **Ethics Documents**: Access university ethics guidelines and policies
-        - 📚 **Coursework Help**: Get assistance with your enrolled modules and assignments
-        - 🔐 **Secure Access**: Authentication ensures you only see your own materials
-        - 🎤 **Audio Support**: Listen to responses with text-to-speech functionality
-        """)
     
     @staticmethod
     def render_progress_indicator():
-        """Render progress indicator for guided flow"""
+        """Render progress indicator for guided flow with translation support"""
         steps = {
             'welcome': 1,
             'path_selection': 1,
@@ -409,13 +415,13 @@ class UIComponents:
         progress = current_step / total_steps
         
         st.progress(progress)
-        st.caption(f"Step {current_step} of {total_steps}")
+        st.caption(t('step_label', current=current_step, total=total_steps))
     
     def render_sidebar(self, database_stats: dict):
-        """Render sidebar with student info and controls"""
+        """Render sidebar with student info and controls with translation support"""
         with st.sidebar:
             # Language selector
-            st.markdown(f"### 🌐 {t('language_selector')}")
+            st.markdown(f"### 🌍 {t('language_selector')}")
             render_language_selector()
             
             # Voice settings
@@ -425,58 +431,56 @@ class UIComponents:
             
             # Student information (if authenticated)
             if st.session_state.student_id and st.session_state.student_data:
-                st.markdown("### 👤 Student Information")
+                st.markdown(f"### 👤 {t('student_information')}")
                 st.markdown(f"""
                 <div style="background: #f0f2f6; color: #000; padding: 1rem; border-radius: 8px;">
                     <p><strong>ID:</strong> {st.session_state.student_id}</p>
-                    <p><strong>Programme:</strong> {st.session_state.student_data['programme']}</p>
-                    <p><strong>Modules:</strong> {len(st.session_state.available_modules)}</p>
+                    <p><strong>{t('programme_label')}</strong> {st.session_state.student_data['programme']}</p>
+                    <p><strong>{t('module_label')}</strong> {len(st.session_state.available_modules)}</p>
                 </div>
                 """, unsafe_allow_html=True)
                 st.markdown("---")
             
             # Current session info
             if st.session_state.conversation_step != 'welcome':
-                st.markdown("### 📍 Current Session")
+                st.markdown(f"### 📁 {t('current_session')}")
                 st.markdown(f"**Path:** {st.session_state.selected_path or 'Not selected'}")
                 
                 if st.session_state.selected_path == 'ethics':
-                    st.markdown("**Document:** Reforming Modernity")
-                    if st.session_state.selected_ethics_category:
-                        st.markdown(f"**Category:** {st.session_state.selected_ethics_category['title']}")
+                    st.markdown(f"**{t('ethics_document')}:** Reforming Modernity")
                 elif st.session_state.selected_module:
-                    st.markdown(f"**Module:** {st.session_state.selected_module['module']}")
+                    st.markdown(f"**{t('module_label')}** {st.session_state.selected_module['module']}")
                     if st.session_state.selected_coursework:
                         st.markdown(f"**Type:** {st.session_state.selected_coursework['title']}")
                 
                 st.markdown("---")
             
             # Database status
-            st.markdown("### 📊 System Status")
+            st.markdown(f"### 📊 {t('system_status')}")
             if st.session_state.database_loaded:
-                st.success("✅ Database Connected")
+                st.success(f"✅ {t('database_connected')}")
                 st.markdown(f"**Students:** {database_stats['students']}")
                 st.markdown(f"**Programmes:** {database_stats['programmes']}")
             else:
-                st.error("❌ Database Not Loaded")
+                st.error(f"❌ {t('database_not_loaded')}")
             
             if Config.OPENAI_API_KEY:
-                st.success("✅ AI Service Connected")
+                st.success(f"✅ {t('ai_service_connected')}")
             else:
-                st.error("❌ AI Service Not Available")
+                st.error(f"❌ {t('ai_service_unavailable')}")
             
             st.markdown("---")
             
             # Quick actions
-            st.markdown("### ⚡ Quick Actions")
+            st.markdown(f"### ⚡ {t('quick_actions')}")
             
-            if st.button("🏠 Start Over", use_container_width=True, type="secondary"):
+            if st.button(f"🏠 {t('start_over')}", use_container_width=True, type="secondary"):
                 from session_manager import SessionManager
                 SessionManager.reset_conversation()
                 st.rerun()
             
             if st.session_state.conversation_step == 'chat':
-                if st.button("🗑️ Clear Chat", use_container_width=True, type="secondary"):
+                if st.button(f"🗑️ {t('clear_chat')}", use_container_width=True, type="secondary"):
                     from session_manager import SessionManager
                     SessionManager.clear_chat()
                     st.rerun()

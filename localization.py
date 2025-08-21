@@ -1,12 +1,15 @@
-# localization.py - Language Management System
+# localization.py - Enhanced Language Management System for University Chatbot
 
 import json
 from typing import Dict, Any, Optional
 from pathlib import Path
 import streamlit as st
+import logging
+
+logger = logging.getLogger(__name__)
 
 class LanguageManager:
-    """Centralized language management system with best practices"""
+    """Enhanced language management system for University Chatbot"""
     
     def __init__(self):
         self.current_language = 'en'
@@ -15,11 +18,7 @@ class LanguageManager:
         self.load_translations()
     
     def load_translations(self):
-        """Load all translation files"""
-        translations_dir = Path("translations")
-        translations_dir.mkdir(exist_ok=True)
-        
-        # Default translations if files don't exist
+        """Load all translation dictionaries"""
         self.translations = {
             'en': self._get_english_translations(),
             'ar': self._get_arabic_translations(),
@@ -27,52 +26,51 @@ class LanguageManager:
             'es': self._get_spanish_translations()
         }
         
-        # Try to load from files
-        for lang_code in self.translations.keys():
-            file_path = translations_dir / f"{lang_code}.json"
-            if file_path.exists():
-                try:
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        self.translations[lang_code] = json.load(f)
-                except Exception as e:
-                    print(f"Error loading {lang_code}.json: {e}")
-    
-    def save_translations(self):
-        """Save translations to JSON files"""
+        # Try to load from JSON files if they exist
         translations_dir = Path("translations")
-        translations_dir.mkdir(exist_ok=True)
-        
-        for lang_code, translations in self.translations.items():
-            file_path = translations_dir / f"{lang_code}.json"
-            try:
-                with open(file_path, 'w', encoding='utf-8') as f:
-                    json.dump(translations, f, ensure_ascii=False, indent=2)
-            except Exception as e:
-                print(f"Error saving {lang_code}.json: {e}")
+        if translations_dir.exists():
+            for lang_code in self.translations.keys():
+                file_path = translations_dir / f"{lang_code}.json"
+                if file_path.exists():
+                    try:
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            loaded_translations = json.load(f)
+                            self.translations[lang_code].update(loaded_translations)
+                            logger.info(f"Loaded translations from {lang_code}.json")
+                    except Exception as e:
+                        logger.error(f"Error loading {lang_code}.json: {e}")
     
     def set_language(self, lang_code: str):
-        """Set current language"""
+        """Set current language and update session state"""
         if lang_code in self.translations:
             self.current_language = lang_code
-            # Update session state
             if 'language' not in st.session_state or st.session_state.language != lang_code:
                 st.session_state.language = lang_code
                 st.rerun()
     
-    def get_text(self, key: str, **kwargs) -> str:
+    def get_text(self, key: str, default: str = None, **kwargs) -> str:
         """Get translated text with parameter substitution"""
-        text = self.translations.get(self.current_language, {}).get(key, key)
+        # Get translation from current language
+        text = self.translations.get(self.current_language, {}).get(key)
+        
+        # Fallback to default parameter if provided
+        if text is None and default is not None:
+            text = default
         
         # Fallback to English if translation missing
-        if text == key and self.current_language != 'en':
+        if text is None and self.current_language != 'en':
             text = self.translations.get('en', {}).get(key, key)
+        
+        # Final fallback to key itself
+        if text is None:
+            text = key
         
         # Parameter substitution
         if kwargs:
             try:
                 text = text.format(**kwargs)
-            except KeyError:
-                pass  # Ignore missing parameters
+            except (KeyError, ValueError):
+                pass  # Ignore formatting errors
         
         return text
     
@@ -85,7 +83,7 @@ class LanguageManager:
         return {
             'en': '🇺🇸 English',
             'ar': '🇸🇦 العربية',
-            'fr': '🇫🇷 Français',
+            'fr': '🇫🇷 Français', 
             'es': '🇪🇸 Español'
         }
     
@@ -93,356 +91,557 @@ class LanguageManager:
         """English translations (base language)"""
         return {
             # App Headers
-            'app_title': 'AI Multi-Document Assistant',
-            'app_subtitle': 'Search across multiple documents simultaneously',
+            'app_title': 'University of Roehampton Assistant',
+            'app_subtitle': 'Your intelligent academic companion',
+            'welcome_message': 'How can I help you today?',
             'powered_by': 'Powered by AI',
             
             # Navigation & Controls
-            'document_library': 'Document Library',
-            'controls': 'Controls',
-            'clear_chat': 'Clear Chat History',
-            'reload_docs': 'Reload Documents',
             'language_selector': 'Language',
+            'voice_settings': 'Voice Settings',
+            'quick_actions': 'Quick Actions',
+            'system_status': 'System Status',
+            'student_information': 'Student Information',
+            'current_session': 'Current Session',
             
-            # Document Status
-            'docs_loaded': '{count} documents loaded',
-            'no_docs_loaded': 'No documents loaded',
-            'loading_docs': 'Loading documents...',
-            'total_files': 'Total Files',
-            'total_words': 'Total Words',
-            'total_pages': 'Total Pages',
-            'total_size': 'Total Size',
-            'reading_time': 'Reading Time',
-            'minutes': 'min',
-            'document_details': 'Document Details',
+            # Authentication
+            'enter_student_id': 'Enter Your Student ID',
+            'student_id_label': 'Student ID:',
+            'student_id_placeholder': 'e.g., A00034131',
+            'student_id_help': 'Enter your complete Roehampton University Student ID',
+            'enter_access_code': 'Enter Your Access Code',
+            'access_code_label': 'Access Code:',
+            'access_code_placeholder': 'Enter your unique code',
+            'access_code_help': 'Enter the numerical code provided to you',
+            'verify_button': 'Verify ✅',
+            'back_button': '🔙 Back',
+            'next_button': 'Next ➡️',
             
-            # File Types
-            'file_type': 'Type',
-            'words': 'Words',
-            'size': 'Size',
+            # Module Selection
+            'select_module': 'Select Your Module',
+            'module_label': 'Module:',
+            'programme_label': 'Programme:',
+            'choose_module': 'Choose the module you need assistance with:',
+            'documents_available': 'documents available',
+            'all_materials': 'All {module} Materials',
+            'select_button': 'Select {module}',
+            
+            # Coursework Types
+            'coursework_assistance': 'Coursework Assistance',
+            'coursework_help_type': 'What type of coursework help do you need?',
+            'assignment_questions': 'Assignment Questions',
+            'assignment_questions_desc': 'Help understanding assignment requirements and questions',
+            'reading_materials': 'Reading Materials',
+            'reading_materials_desc': 'Assistance with course readings and materials',
+            'concepts_theory': 'Concepts & Theory',
+            'concepts_theory_desc': 'Explanation of key concepts and theories',
+            'exam_preparation': 'Exam Preparation',
+            'exam_preparation_desc': 'Help preparing for examinations',
+            'general_questions': 'General Questions',
+            'general_questions_desc': 'Any other questions about the module',
             
             # Chat Interface
-            'ready_to_search': 'Ready to search across {count} documents!',
-            'search_through': 'I can search through: {docs}',
-            'and_more': 'and more',
-            'try_asking': 'Try asking:',
-            'search_placeholder': 'Search across all documents...',
-            'enter_question': 'Please enter a question.',
-            'searching': 'Searching across all documents...',
-            
-            # Example Questions
-            'example_1': 'What are the main topics covered in the documents?',
-            'example_2': 'Find information about [specific topic]',
-            'example_3': 'Compare the content between documents',
-            'example_4': 'Summarize key points from all documents',
-            
-            # AI Responses
-            'ai_assistant': 'AI Assistant',
+            'course_assistant': 'Course Assistant',
+            'ethics_advisor': 'Ethics Advisor',
             'you': 'You',
-            'hello_response': '''👋 Hello! Welcome to **{app_name}**!
-
-I'm your AI assistant with access to **{doc_count} documents** in your library: {doc_list}.
-
-I can help you:
-• **Search across all documents** to find relevant information
-• **Compare information** between different documents  
-• **Summarize content** from one or multiple sources
-• **Answer specific questions** with source attribution
-
-What would you like to explore across your document collection?''',
+            'loading_materials': 'Loading your module materials...',
+            'example_questions': 'Example Questions',
+            'chat_placeholder': 'Ask me about your coursework...',
+            'ethics_placeholder': 'Ask me about ethics based on the Reforming Modernity document...',
+            'analyzing_materials': 'Analyzing your coursework materials...',
+            'consulting_ethics': 'Consulting ethics guidance...',
+            
+            # Audio
+            'enable_audio': 'Enable Audio Responses',
+            'audio_help': 'Toggle audio responses for accessibility',
+            'select_voice': 'Select Voice',
+            'voice_help': 'Choose the voice for audio responses',
+            'test_voice': 'Test Voice',
+            'generating_audio': 'Generating audio...',
+            'audio_ready': 'Audio ready!',
+            'audio_error': 'Failed to generate audio',
+            'audio_disabled': 'Audio responses are disabled',
+            
+            # Buttons and Actions
+            'new_session': 'New Session',
+            'clear_chat': 'Clear Chat',
+            'change_module': 'Change Module',
+            'start_over': 'Start Over',
+            'back_to_menu': 'Back to Menu',
+            'back_to_welcome': 'Back to Welcome',
+            'back_to_modules': 'Back to Modules',
+            'back_to_authentication': 'Back to Authentication',
             
             # Error Messages
-            'api_key_missing': 'OpenAI client not initialized. Please check your API key.',
-            'no_docs_error': 'No documents loaded. Please check your data folder.',
-            'rate_limit_error': 'Rate limit reached. Please wait a moment before asking another question.',
-            'auth_error': 'Authentication error. Please check your OpenAI API key.',
-            'invalid_request': 'Invalid request: {error}',
-            'response_error': 'Error generating response: {error}',
-            'app_error': 'Application Error: {error}',
-            'refresh_page': 'Please refresh the page and try again.',
+            'api_key_missing': 'OpenAI API key not configured. Please check your .env file.',
+            'no_docs_error': 'No document content available',
+            'enter_question': 'Please ask a question about your coursework.',
+            'enter_ethics_question': 'Please enter a question.',
+            'no_modules_found': 'No modules found for your account. Please contact support.',
+            'student_not_found': 'Student ID \'{student_id}\' not found in database',
+            'invalid_code': 'Invalid code for student {student_id}',
+            'auth_successful': 'Authentication successful',
+            'auth_required': 'Student authentication required',
+            'student_data_missing': 'Student data not loaded',
             
-            # Setup Messages
-            'api_key_not_found': 'OpenAI API key not found!',
-            'add_api_key': 'Please add your OpenAI API key to the .env file:',
-            'looking_for_files': 'Looking for PDF and DOCX files in: {folder}',
-            'supported_formats': 'Supported formats: PDF, DOCX',
+            # Status Messages
+            'database_connected': 'Database Connected',
+            'database_not_loaded': 'Database Not Loaded',
+            'ai_service_connected': 'AI Service Connected',
+            'ai_service_unavailable': 'AI Service Not Available',
             
-            # File Operations
-            'looking_in': 'Looking in: {folder}',
-            'data_folder_not_found': 'Data folder not found: {folder}',
-            'no_supported_docs': 'No supported documents found in {folder}. Found files: {files}',
-            'loaded_docs_status': 'Loaded {success}/{total} documents. {failed} failed.',
-            'all_docs_loaded': 'Successfully loaded {success}/{total} documents',
-            'failed_to_load': 'Failed to load any documents. Errors: {errors}',
+            # Welcome Screen
+            'ethics_document_help': 'Ethics Document Help',
+            'ethics_help_desc': 'Get assistance with ethics-related documents and guidelines',
+            'coursework_help': 'University Coursework Help',
+            'coursework_help_desc': 'Get help with your specific coursework materials',
+            
+            # Ethics
+            'ethics_guidance': 'Ethics Guidance',
+            'ethics_document': 'Ethics Document',
+            'about_ethics_document': 'About This Ethics Document',
+            'ethics_assistant_usage': 'How to Use This Ethics Assistant',
+            'ethics_examples': 'You can ask questions like:',
+            'ethics_example_1': 'What are the main ethical principles discussed in this document?',
+            'ethics_example_2': 'How does this document define ethical behavior?',
+            'ethics_example_3': 'What guidance does this provide for [specific situation]?',
+            'ethics_example_4': 'Can you summarize the key ethical concepts covered?',
+            'ethics_tips': 'Tips:',
+            'ethics_tip_1': 'Be specific about what ethical guidance you\'re looking for',
+            'ethics_tip_2': 'Ask about concepts, principles, or situations mentioned in the document',
+            'ethics_tip_3': 'Request examples or applications of ethical principles',
+            
+            # Progress and Features
+            'step_label': 'Step {current} of {total}',
+            'welcome_features': 'Feature Highlights',
+            'feature_ethics_title': 'Ethics Guidance',
+            'feature_ethics_desc': 'Access comprehensive ethics guidance based on university policies',
+            'feature_coursework_title': 'Coursework Support',
+            'feature_coursework_desc': 'Get personalized help with your module materials and assignments',
+            'feature_secure_title': 'Secure Access',
+            'feature_secure_desc': 'Student authentication ensures you only access your own materials',
+            'feature_audio_title': 'Audio Support',
+            'feature_audio_desc': 'Listen to responses with text-to-speech functionality',
         }
     
     def _get_arabic_translations(self) -> Dict[str, str]:
         """Arabic translations"""
         return {
             # App Headers
-            'app_title': 'مساعد الذكي متعدد المستندات',
-            'app_subtitle': 'البحث عبر مستندات متعددة في آن واحد',
+            'app_title': 'مساعد جامعة روهامبتون',
+            'app_subtitle': 'رفيقك الأكاديمي الذكي',
+            'welcome_message': 'كيف يمكنني مساعدتك اليوم؟',
             'powered_by': 'مدعوم بالذكاء الاصطناعي',
             
             # Navigation & Controls
-            'document_library': 'مكتبة المستندات',
-            'controls': 'عناصر التحكم',
-            'clear_chat': 'مسح سجل المحادثة',
-            'reload_docs': 'إعادة تحميل المستندات',
             'language_selector': 'اللغة',
+            'voice_settings': 'إعدادات الصوت',
+            'quick_actions': 'الإجراءات السريعة',
+            'system_status': 'حالة النظام',
+            'student_information': 'معلومات الطالب',
+            'current_session': 'الجلسة الحالية',
             
-            # Document Status
-            'docs_loaded': 'تم تحميل {count} مستند',
-            'no_docs_loaded': 'لم يتم تحميل أي مستندات',
-            'loading_docs': 'جاري تحميل المستندات...',
-            'total_files': 'إجمالي الملفات',
-            'total_words': 'إجمالي الكلمات',
-            'total_pages': 'إجمالي الصفحات',
-            'total_size': 'الحجم الإجمالي',
-            'reading_time': 'وقت القراءة',
-            'minutes': 'دقيقة',
-            'document_details': 'تفاصيل المستندات',
+            # Authentication
+            'enter_student_id': 'أدخل رقم الطالب الجامعي',
+            'student_id_label': 'رقم الطالب:',
+            'student_id_placeholder': 'مثال: A00034131',
+            'student_id_help': 'أدخل رقم الطالب الكامل لجامعة روهامبتون',
+            'enter_access_code': 'أدخل رمز الوصول',
+            'access_code_label': 'رمز الوصول:',
+            'access_code_placeholder': 'أدخل الرمز الفريد الخاص بك',
+            'access_code_help': 'أدخل الرمز الرقمي المقدم لك',
+            'verify_button': 'تحقق ✅',
+            'back_button': '🔙 رجوع',
+            'next_button': 'التالي ➡️',
             
-            # File Types
-            'file_type': 'النوع',
-            'words': 'كلمات',
-            'size': 'الحجم',
+            # Module Selection
+            'select_module': 'اختر الوحدة الدراسية',
+            'module_label': 'الوحدة:',
+            'programme_label': 'البرنامج:',
+            'choose_module': 'اختر الوحدة الدراسية التي تحتاج المساعدة فيها:',
+            'documents_available': 'مستندات متاحة',
+            'all_materials': 'جميع مواد {module}',
+            'select_button': 'اختر {module}',
+            
+            # Coursework Types
+            'coursework_assistance': 'مساعدة الواجبات الدراسية',
+            'coursework_help_type': 'ما نوع المساعدة في الواجبات التي تحتاجها؟',
+            'assignment_questions': 'أسئلة الواجبات',
+            'assignment_questions_desc': 'مساعدة في فهم متطلبات وأسئلة الواجبات',
+            'reading_materials': 'المواد القرائية',
+            'reading_materials_desc': 'مساعدة في قراءات ومواد المقرر',
+            'concepts_theory': 'المفاهيم والنظريات',
+            'concepts_theory_desc': 'شرح المفاهيم والنظريات الأساسية',
+            'exam_preparation': 'الاستعداد للامتحانات',
+            'exam_preparation_desc': 'مساعدة في الاستعداد للامتحانات',
+            'general_questions': 'أسئلة عامة',
+            'general_questions_desc': 'أي أسئلة أخرى حول الوحدة الدراسية',
             
             # Chat Interface
-            'ready_to_search': 'جاهز للبحث عبر {count} مستند!',
-            'search_through': 'يمكنني البحث من خلال: {docs}',
-            'and_more': 'والمزيد',
-            'try_asking': 'جرب أن تسأل:',
-            'search_placeholder': 'ابحث عبر جميع المستندات...',
-            'enter_question': 'يرجى إدخال سؤال.',
-            'searching': 'البحث عبر جميع المستندات...',
-            
-            # Example Questions
-            'example_1': 'ما هي الموضوعات الرئيسية المغطاة في المستندات؟',
-            'example_2': 'ابحث عن معلومات حول [موضوع محدد]',
-            'example_3': 'قارن المحتوى بين المستندات',
-            'example_4': 'لخص النقاط الرئيسية من جميع المستندات',
-            
-            # AI Responses
-            'ai_assistant': 'المساعد الذكي',
+            'course_assistant': 'مساعد المقرر',
+            'ethics_advisor': 'مستشار الأخلاق',
             'you': 'أنت',
-            'hello_response': '''👋 أهلاً! مرحباً بك في **{app_name}**!
-
-أنا مساعدك الذكي مع الوصول إلى **{doc_count} مستند** في مكتبتك: {doc_list}.
-
-يمكنني مساعدتك في:
-• **البحث عبر جميع المستندات** للعثور على المعلومات ذات الصلة
-• **مقارنة المعلومات** بين المستندات المختلفة
-• **تلخيص المحتوى** من مصدر واحد أو مصادر متعددة
-• **الإجابة على أسئلة محددة** مع إسناد المصادر
-
-ما الذي تود استكشافه في مجموعة مستنداتك؟''',
+            'loading_materials': 'جارٍ تحميل مواد الوحدة الدراسية...',
+            'example_questions': 'أمثلة على الأسئلة',
+            'chat_placeholder': 'اسألني عن واجباتك الدراسية...',
+            'ethics_placeholder': 'اسألني عن الأخلاق بناءً على وثيقة إصلاح الحداثة...',
+            'analyzing_materials': 'جارٍ تحليل مواد واجباتك الدراسية...',
+            'consulting_ethics': 'جارٍ استشارة التوجيه الأخلاقي...',
+            
+            # Audio
+            'enable_audio': 'تفعيل الاستجابات الصوتية',
+            'audio_help': 'تبديل الاستجابات الصوتية لإمكانية الوصول',
+            'select_voice': 'اختر الصوت',
+            'voice_help': 'اختر الصوت للاستجابات الصوتية',
+            'test_voice': 'اختبار الصوت',
+            'generating_audio': 'جارٍ إنشاء الصوت...',
+            'audio_ready': 'الصوت جاهز!',
+            'audio_error': 'فشل في إنشاء الصوت',
+            'audio_disabled': 'الاستجابات الصوتية معطلة',
+            
+            # Buttons and Actions
+            'new_session': 'جلسة جديدة',
+            'clear_chat': 'مسح المحادثة',
+            'change_module': 'تغيير الوحدة',
+            'start_over': 'البدء من جديد',
+            'back_to_menu': 'العودة للقائمة',
+            'back_to_welcome': 'العودة للترحيب',
+            'back_to_modules': 'العودة للوحدات',
+            'back_to_authentication': 'العودة للمصادقة',
             
             # Error Messages
-            'api_key_missing': 'لم يتم تهيئة عميل OpenAI. يرجى التحقق من مفتاح API.',
-            'no_docs_error': 'لم يتم تحميل أي مستندات. يرجى التحقق من مجلد البيانات.',
-            'rate_limit_error': 'تم الوصول إلى حد المعدل. يرجى الانتظار قليلاً قبل طرح سؤال آخر.',
-            'auth_error': 'خطأ في المصادقة. يرجى التحقق من مفتاح OpenAI API.',
-            'invalid_request': 'طلب غير صحيح: {error}',
-            'response_error': 'خطأ في إنتاج الاستجابة: {error}',
-            'app_error': 'خطأ في التطبيق: {error}',
-            'refresh_page': 'يرجى تحديث الصفحة والمحاولة مرة أخرى.',
+            'api_key_missing': 'مفتاح OpenAI API غير مكوّن. يرجى التحقق من ملف .env الخاص بك.',
+            'no_docs_error': 'لا يوجد محتوى وثيقة متاح',
+            'enter_question': 'يرجى طرح سؤال حول واجباتك الدراسية.',
+            'enter_ethics_question': 'يرجى إدخال سؤال.',
+            'no_modules_found': 'لم يتم العثور على وحدات لحسابك. يرجى الاتصال بالدعم.',
+            'student_not_found': 'رقم الطالب \'{student_id}\' غير موجود في قاعدة البيانات',
+            'invalid_code': 'رمز غير صحيح للطالب {student_id}',
+            'auth_successful': 'المصادقة ناجحة',
+            'auth_required': 'مصادقة الطالب مطلوبة',
+            'student_data_missing': 'بيانات الطالب غير محملة',
             
-            # Setup Messages
-            'api_key_not_found': 'مفتاح OpenAI API غير موجود!',
-            'add_api_key': 'يرجى إضافة مفتاح OpenAI API إلى ملف .env:',
-            'looking_for_files': 'البحث عن ملفات PDF و DOCX في: {folder}',
-            'supported_formats': 'التنسيقات المدعومة: PDF، DOCX',
+            # Status Messages
+            'database_connected': 'قاعدة البيانات متصلة',
+            'database_not_loaded': 'قاعدة البيانات غير محملة',
+            'ai_service_connected': 'خدمة الذكاء الاصطناعي متصلة',
+            'ai_service_unavailable': 'خدمة الذكاء الاصطناعي غير متاحة',
             
-            # File Operations
-            'looking_in': 'البحث في: {folder}',
-            'data_folder_not_found': 'مجلد البيانات غير موجود: {folder}',
-            'no_supported_docs': 'لا توجد مستندات مدعومة في {folder}. الملفات الموجودة: {files}',
-            'loaded_docs_status': 'تم تحميل {success}/{total} مستندات. فشل {failed}.',
-            'all_docs_loaded': 'تم تحميل {success}/{total} مستندات بنجاح',
-            'failed_to_load': 'فشل في تحميل أي مستندات. الأخطاء: {errors}',
+            # Welcome Screen
+            'ethics_document_help': 'مساعدة الوثائق الأخلاقية',
+            'ethics_help_desc': 'احصل على مساعدة في الوثائق والإرشادات المتعلقة بالأخلاق',
+            'coursework_help': 'مساعدة الواجبات الجامعية',
+            'coursework_help_desc': 'احصل على مساعدة في مواد واجباتك المحددة',
+            
+            # Ethics
+            'ethics_guidance': 'التوجيه الأخلاقي',
+            'ethics_document': 'الوثيقة الأخلاقية',
+            'about_ethics_document': 'حول هذه الوثيقة الأخلاقية',
+            'ethics_assistant_usage': 'كيفية استخدام مساعد الأخلاق هذا',
+            'ethics_examples': 'يمكنك طرح أسئلة مثل:',
+            'ethics_example_1': 'ما هي المبادئ الأخلاقية الرئيسية المناقشة في هذه الوثيقة؟',
+            'ethics_example_2': 'كيف تعرّف هذه الوثيقة السلوك الأخلاقي؟',
+            'ethics_example_3': 'ما التوجيه الذي تقدمه هذه الوثيقة لـ [موقف محدد]؟',
+            'ethics_example_4': 'هل يمكنك تلخيص المفاهيم الأخلاقية الرئيسية المغطاة؟',
+            'ethics_tips': 'نصائح:',
+            'ethics_tip_1': 'كن محدداً حول التوجيه الأخلاقي الذي تبحث عنه',
+            'ethics_tip_2': 'اسأل عن المفاهيم أو المبادئ أو المواقف المذكورة في الوثيقة',
+            'ethics_tip_3': 'اطلب أمثلة أو تطبيقات للمبادئ الأخلاقية',
+            
+            # Progress and Features
+            'step_label': 'الخطوة {current} من {total}',
+            'welcome_features': 'أبرز الميزات',
+            'feature_ethics_title': 'التوجيه الأخلاقي',
+            'feature_ethics_desc': 'الوصول إلى التوجيه الأخلاقي الشامل القائم على سياسات الجامعة',
+            'feature_coursework_title': 'دعم الواجبات الدراسية',
+            'feature_coursework_desc': 'احصل على مساعدة شخصية في مواد وحداتك وواجباتك',
+            'feature_secure_title': 'وصول آمن',
+            'feature_secure_desc': 'مصادقة الطالب تضمن وصولك فقط إلى موادك الخاصة',
+            'feature_audio_title': 'دعم صوتي',
+            'feature_audio_desc': 'استمع إلى الردود باستخدام وظيفة النص إلى كلام',
         }
     
     def _get_french_translations(self) -> Dict[str, str]:
         """French translations"""
         return {
             # App Headers
-            'app_title': 'Assistant IA Multi-Documents',
-            'app_subtitle': 'Recherchez simultanément dans plusieurs documents',
+            'app_title': 'Assistant Université de Roehampton',
+            'app_subtitle': 'Votre compagnon académique intelligent',
+            'welcome_message': 'Comment puis-je vous aider aujourd\'hui ?',
             'powered_by': 'Alimenté par IA',
             
             # Navigation & Controls
-            'document_library': 'Bibliothèque de Documents',
-            'controls': 'Contrôles',
-            'clear_chat': 'Effacer l\'Historique',
-            'reload_docs': 'Recharger les Documents',
             'language_selector': 'Langue',
+            'voice_settings': 'Paramètres Vocaux',
+            'quick_actions': 'Actions Rapides',
+            'system_status': 'État du Système',
+            'student_information': 'Informations Étudiant',
+            'current_session': 'Session Actuelle',
             
-            # Document Status
-            'docs_loaded': '{count} documents chargés',
-            'no_docs_loaded': 'Aucun document chargé',
-            'loading_docs': 'Chargement des documents...',
-            'total_files': 'Fichiers Totaux',
-            'total_words': 'Mots Totaux',
-            'total_pages': 'Pages Totales',
-            'total_size': 'Taille Totale',
-            'reading_time': 'Temps de Lecture',
-            'minutes': 'min',
-            'document_details': 'Détails des Documents',
+            # Authentication
+            'enter_student_id': 'Entrez Votre ID Étudiant',
+            'student_id_label': 'ID Étudiant :',
+            'student_id_placeholder': 'ex: A00034131',
+            'student_id_help': 'Entrez votre ID complet d\'étudiant de l\'Université de Roehampton',
+            'enter_access_code': 'Entrez Votre Code d\'Accès',
+            'access_code_label': 'Code d\'Accès :',
+            'access_code_placeholder': 'Entrez votre code unique',
+            'access_code_help': 'Entrez le code numérique qui vous a été fourni',
+            'verify_button': 'Vérifier ✅',
+            'back_button': '🔙 Retour',
+            'next_button': 'Suivant ➡️',
             
-            # File Types
-            'file_type': 'Type',
-            'words': 'Mots',
-            'size': 'Taille',
+            # Module Selection
+            'select_module': 'Sélectionnez Votre Module',
+            'module_label': 'Module :',
+            'programme_label': 'Programme :',
+            'choose_module': 'Choisissez le module pour lequel vous avez besoin d\'aide :',
+            'documents_available': 'documents disponibles',
+            'all_materials': 'Tous les Matériaux {module}',
+            'select_button': 'Sélectionner {module}',
+            
+            # Coursework Types
+            'coursework_assistance': 'Assistance aux Devoirs',
+            'coursework_help_type': 'Quel type d\'aide aux devoirs avez-vous besoin ?',
+            'assignment_questions': 'Questions d\'Assignation',
+            'assignment_questions_desc': 'Aide pour comprendre les exigences et questions d\'assignation',
+            'reading_materials': 'Matériaux de Lecture',
+            'reading_materials_desc': 'Assistance avec les lectures et matériaux de cours',
+            'concepts_theory': 'Concepts et Théorie',
+            'concepts_theory_desc': 'Explication des concepts et théories clés',
+            'exam_preparation': 'Préparation aux Examens',
+            'exam_preparation_desc': 'Aide pour se préparer aux examens',
+            'general_questions': 'Questions Générales',
+            'general_questions_desc': 'Toute autre question concernant le module',
             
             # Chat Interface
-            'ready_to_search': 'Prêt à rechercher dans {count} documents !',
-            'search_through': 'Je peux rechercher dans : {docs}',
-            'and_more': 'et plus',
-            'try_asking': 'Essayez de demander :',
-            'search_placeholder': 'Rechercher dans tous les documents...',
-            'enter_question': 'Veuillez entrer une question.',
-            'searching': 'Recherche dans tous les documents...',
-            
-            # Example Questions
-            'example_1': 'Quels sont les principaux sujets couverts dans les documents ?',
-            'example_2': 'Trouvez des informations sur [sujet spécifique]',
-            'example_3': 'Comparez le contenu entre les documents',
-            'example_4': 'Résumez les points clés de tous les documents',
-            
-            # AI Responses
-            'ai_assistant': 'Assistant IA',
+            'course_assistant': 'Assistant de Cours',
+            'ethics_advisor': 'Conseiller en Éthique',
             'you': 'Vous',
-            'hello_response': '''👋 Bonjour ! Bienvenue dans **{app_name}** !
-
-Je suis votre assistant IA avec accès à **{doc_count} documents** dans votre bibliothèque : {doc_list}.
-
-Je peux vous aider à :
-• **Rechercher dans tous les documents** pour trouver des informations pertinentes
-• **Comparer les informations** entre différents documents
-• **Résumer le contenu** d'une ou plusieurs sources
-• **Répondre à des questions spécifiques** avec attribution des sources
-
-Que souhaitez-vous explorer dans votre collection de documents ?''',
+            'loading_materials': 'Chargement de vos matériaux de module...',
+            'example_questions': 'Exemples de Questions',
+            'chat_placeholder': 'Posez-moi des questions sur vos devoirs...',
+            'ethics_placeholder': 'Posez-moi des questions sur l\'éthique basées sur le document Reforming Modernity...',
+            'analyzing_materials': 'Analyse de vos matériaux de devoirs...',
+            'consulting_ethics': 'Consultation des conseils éthiques...',
+            
+            # Audio
+            'enable_audio': 'Activer les Réponses Audio',
+            'audio_help': 'Basculer les réponses audio pour l\'accessibilité',
+            'select_voice': 'Sélectionner la Voix',
+            'voice_help': 'Choisissez la voix pour les réponses audio',
+            'test_voice': 'Tester la Voix',
+            'generating_audio': 'Génération audio...',
+            'audio_ready': 'Audio prêt !',
+            'audio_error': 'Échec de la génération audio',
+            'audio_disabled': 'Réponses audio désactivées',
+            
+            # Buttons and Actions
+            'new_session': 'Nouvelle Session',
+            'clear_chat': 'Effacer le Chat',
+            'change_module': 'Changer de Module',
+            'start_over': 'Recommencer',
+            'back_to_menu': 'Retour au Menu',
+            'back_to_welcome': 'Retour à l\'Accueil',
+            'back_to_modules': 'Retour aux Modules',
+            'back_to_authentication': 'Retour à l\'Authentification',
             
             # Error Messages
-            'api_key_missing': 'Client OpenAI non initialisé. Veuillez vérifier votre clé API.',
-            'no_docs_error': 'Aucun document chargé. Veuillez vérifier votre dossier de données.',
-            'rate_limit_error': 'Limite de taux atteinte. Veuillez attendre un moment avant de poser une autre question.',
-            'auth_error': 'Erreur d\'authentification. Veuillez vérifier votre clé API OpenAI.',
-            'invalid_request': 'Demande invalide : {error}',
-            'response_error': 'Erreur lors de la génération de la réponse : {error}',
-            'app_error': 'Erreur d\'Application : {error}',
-            'refresh_page': 'Veuillez actualiser la page et réessayer.',
+            'api_key_missing': 'Clé API OpenAI non configurée. Veuillez vérifier votre fichier .env.',
+            'no_docs_error': 'Aucun contenu de document disponible',
+            'enter_question': 'Veuillez poser une question sur vos devoirs.',
+            'enter_ethics_question': 'Veuillez entrer une question.',
+            'no_modules_found': 'Aucun module trouvé pour votre compte. Veuillez contacter le support.',
+            'student_not_found': 'ID étudiant \'{student_id}\' non trouvé dans la base de données',
+            'invalid_code': 'Code invalide pour l\'étudiant {student_id}',
+            'auth_successful': 'Authentification réussie',
+            'auth_required': 'Authentification étudiant requise',
+            'student_data_missing': 'Données étudiant non chargées',
             
-            # Setup Messages
-            'api_key_not_found': 'Clé API OpenAI non trouvée !',
-            'add_api_key': 'Veuillez ajouter votre clé API OpenAI au fichier .env :',
-            'looking_for_files': 'Recherche de fichiers PDF et DOCX dans : {folder}',
-            'supported_formats': 'Formats supportés : PDF, DOCX',
+            # Status Messages
+            'database_connected': 'Base de Données Connectée',
+            'database_not_loaded': 'Base de Données Non Chargée',
+            'ai_service_connected': 'Service IA Connecté',
+            'ai_service_unavailable': 'Service IA Non Disponible',
             
-            # File Operations
-            'looking_in': 'Recherche dans : {folder}',
-            'data_folder_not_found': 'Dossier de données non trouvé : {folder}',
-            'no_supported_docs': 'Aucun document supporté trouvé dans {folder}. Fichiers trouvés : {files}',
-            'loaded_docs_status': '{success}/{total} documents chargés. {failed} échoués.',
-            'all_docs_loaded': '{success}/{total} documents chargés avec succès',
-            'failed_to_load': 'Échec du chargement de tous les documents. Erreurs : {errors}',
+            # Welcome Screen
+            'ethics_document_help': 'Aide Documents Éthiques',
+            'ethics_help_desc': 'Obtenez de l\'aide avec les documents et directives liés à l\'éthique',
+            'coursework_help': 'Aide Devoirs Universitaires',
+            'coursework_help_desc': 'Obtenez de l\'aide avec vos matériaux de devoirs spécifiques',
+            
+            # Ethics
+            'ethics_guidance': 'Conseils Éthiques',
+            'ethics_document': 'Document Éthique',
+            'about_ethics_document': 'À Propos de ce Document Éthique',
+            'ethics_assistant_usage': 'Comment Utiliser cet Assistant Éthique',
+            'ethics_examples': 'Vous pouvez poser des questions comme :',
+            'ethics_example_1': 'Quels sont les principaux principes éthiques discutés dans ce document ?',
+            'ethics_example_2': 'Comment ce document définit-il le comportement éthique ?',
+            'ethics_example_3': 'Quels conseils cela fournit-il pour [situation spécifique] ?',
+            'ethics_example_4': 'Pouvez-vous résumer les concepts éthiques clés couverts ?',
+            'ethics_tips': 'Conseils :',
+            'ethics_tip_1': 'Soyez spécifique sur les conseils éthiques que vous recherchez',
+            'ethics_tip_2': 'Posez des questions sur les concepts, principes ou situations mentionnés dans le document',
+            'ethics_tip_3': 'Demandez des exemples ou applications de principes éthiques',
+            
+            # Progress and Features
+            'step_label': 'Étape {current} sur {total}',
+            'welcome_features': 'Points Forts des Fonctionnalités',
+            'feature_ethics_title': 'Conseils Éthiques',
+            'feature_ethics_desc': 'Accédez à des conseils éthiques complets basés sur les politiques universitaires',
+            'feature_coursework_title': 'Support aux Devoirs',
+            'feature_coursework_desc': 'Obtenez une aide personnalisée avec vos matériaux de module et devoirs',
+            'feature_secure_title': 'Accès Sécurisé',
+            'feature_secure_desc': 'L\'authentification étudiant garantit que vous n\'accédez qu\'à vos propres matériaux',
+            'feature_audio_title': 'Support Audio',
+            'feature_audio_desc': 'Écoutez les réponses avec la fonctionnalité de synthèse vocale',
         }
     
     def _get_spanish_translations(self) -> Dict[str, str]:
         """Spanish translations"""
         return {
             # App Headers
-            'app_title': 'Asistente IA Multi-Documentos',
-            'app_subtitle': 'Busca en múltiples documentos simultáneamente',
+            'app_title': 'Asistente Universidad de Roehampton',
+            'app_subtitle': 'Tu compañero académico inteligente',
+            'welcome_message': '¿Cómo puedo ayudarte hoy?',
             'powered_by': 'Impulsado por IA',
             
             # Navigation & Controls
-            'document_library': 'Biblioteca de Documentos',
-            'controls': 'Controles',
-            'clear_chat': 'Limpiar Historial',
-            'reload_docs': 'Recargar Documentos',
             'language_selector': 'Idioma',
+            'voice_settings': 'Configuración de Voz',
+            'quick_actions': 'Acciones Rápidas',
+            'system_status': 'Estado del Sistema',
+            'student_information': 'Información del Estudiante',
+            'current_session': 'Sesión Actual',
             
-            # Document Status
-            'docs_loaded': '{count} documentos cargados',
-            'no_docs_loaded': 'No hay documentos cargados',
-            'loading_docs': 'Cargando documentos...',
-            'total_files': 'Archivos Totales',
-            'total_words': 'Palabras Totales',
-            'total_pages': 'Páginas Totales',
-            'total_size': 'Tamaño Total',
-            'reading_time': 'Tiempo de Lectura',
-            'minutes': 'min',
-            'document_details': 'Detalles de Documentos',
+            # Authentication
+            'enter_student_id': 'Ingresa tu ID de Estudiante',
+            'student_id_label': 'ID de Estudiante:',
+            'student_id_placeholder': 'ej: A00034131',
+            'student_id_help': 'Ingresa tu ID completo de estudiante de la Universidad de Roehampton',
+            'enter_access_code': 'Ingresa tu Código de Acceso',
+            'access_code_label': 'Código de Acceso:',
+            'access_code_placeholder': 'Ingresa tu código único',
+            'access_code_help': 'Ingresa el código numérico que se te proporcionó',
+            'verify_button': 'Verificar ✅',
+            'back_button': '🔙 Atrás',
+            'next_button': 'Siguiente ➡️',
             
-            # File Types
-            'file_type': 'Tipo',
-            'words': 'Palabras',
-            'size': 'Tamaño',
+            # Module Selection
+            'select_module': 'Selecciona tu Módulo',
+            'module_label': 'Módulo:',
+            'programme_label': 'Programa:',
+            'choose_module': 'Elige el módulo con el que necesitas ayuda:',
+            'documents_available': 'documentos disponibles',
+            'all_materials': 'Todos los Materiales de {module}',
+            'select_button': 'Seleccionar {module}',
+            
+            # Coursework Types
+            'coursework_assistance': 'Asistencia con Tareas',
+            'coursework_help_type': '¿Qué tipo de ayuda con tareas necesitas?',
+            'assignment_questions': 'Preguntas de Asignación',
+            'assignment_questions_desc': 'Ayuda para entender los requisitos y preguntas de asignación',
+            'reading_materials': 'Materiales de Lectura',
+            'reading_materials_desc': 'Asistencia con lecturas y materiales del curso',
+            'concepts_theory': 'Conceptos y Teoría',
+            'concepts_theory_desc': 'Explicación de conceptos y teorías clave',
+            'exam_preparation': 'Preparación para Exámenes',
+            'exam_preparation_desc': 'Ayuda para prepararse para exámenes',
+            'general_questions': 'Preguntas Generales',
+            'general_questions_desc': 'Cualquier otra pregunta sobre el módulo',
             
             # Chat Interface
-            'ready_to_search': '¡Listo para buscar en {count} documentos!',
-            'search_through': 'Puedo buscar en: {docs}',
-            'and_more': 'y más',
-            'try_asking': 'Intenta preguntar:',
-            'search_placeholder': 'Buscar en todos los documentos...',
-            'enter_question': 'Por favor ingresa una pregunta.',
-            'searching': 'Buscando en todos los documentos...',
-            
-            # Example Questions
-            'example_1': '¿Cuáles son los temas principales cubiertos en los documentos?',
-            'example_2': 'Encuentra información sobre [tema específico]',
-            'example_3': 'Compara el contenido entre documentos',
-            'example_4': 'Resume los puntos clave de todos los documentos',
-            
-            # AI Responses
-            'ai_assistant': 'Asistente IA',
+            'course_assistant': 'Asistente del Curso',
+            'ethics_advisor': 'Asesor de Ética',
             'you': 'Tú',
-            'hello_response': '''👋 ¡Hola! ¡Bienvenido a **{app_name}**!
-
-Soy tu asistente IA con acceso a **{doc_count} documentos** en tu biblioteca: {doc_list}.
-
-Puedo ayudarte a:
-• **Buscar en todos los documentos** para encontrar información relevante
-• **Comparar información** entre diferentes documentos
-• **Resumir contenido** de una o múltiples fuentes
-• **Responder preguntas específicas** con atribución de fuentes
-
-¿Qué te gustaría explorar en tu colección de documentos?''',
+            'loading_materials': 'Cargando tus materiales del módulo...',
+            'example_questions': 'Preguntas de Ejemplo',
+            'chat_placeholder': 'Pregúntame sobre tus tareas...',
+            'ethics_placeholder': 'Pregúntame sobre ética basado en el documento Reforming Modernity...',
+            'analyzing_materials': 'Analizando tus materiales de tareas...',
+            'consulting_ethics': 'Consultando orientación ética...',
+            
+            # Audio
+            'enable_audio': 'Habilitar Respuestas de Audio',
+            'audio_help': 'Alternar respuestas de audio para accesibilidad',
+            'select_voice': 'Seleccionar Voz',
+            'voice_help': 'Elige la voz para las respuestas de audio',
+            'test_voice': 'Probar Voz',
+            'generating_audio': 'Generando audio...',
+            'audio_ready': '¡Audio listo!',
+            'audio_error': 'Error al generar audio',
+            'audio_disabled': 'Respuestas de audio deshabilitadas',
+            
+            # Buttons and Actions
+            'new_session': 'Nueva Sesión',
+            'clear_chat': 'Limpiar Chat',
+            'change_module': 'Cambiar Módulo',
+            'start_over': 'Empezar de Nuevo',
+            'back_to_menu': 'Volver al Menú',
+            'back_to_welcome': 'Volver al Inicio',
+            'back_to_modules': 'Volver a Módulos',
+            'back_to_authentication': 'Volver a Autenticación',
             
             # Error Messages
-            'api_key_missing': 'Cliente OpenAI no inicializado. Por favor verifica tu clave API.',
-            'no_docs_error': 'No hay documentos cargados. Por favor verifica tu carpeta de datos.',
-            'rate_limit_error': 'Límite de velocidad alcanzado. Por favor espera un momento antes de hacer otra pregunta.',
-            'auth_error': 'Error de autenticación. Por favor verifica tu clave API de OpenAI.',
-            'invalid_request': 'Solicitud inválida: {error}',
-            'response_error': 'Error generando respuesta: {error}',
-            'app_error': 'Error de Aplicación: {error}',
-            'refresh_page': 'Por favor actualiza la página e intenta de nuevo.',
+            'api_key_missing': 'Clave API de OpenAI no configurada. Por favor verifica tu archivo .env.',
+            'no_docs_error': 'No hay contenido de documento disponible',
+            'enter_question': 'Por favor haz una pregunta sobre tus tareas.',
+            'enter_ethics_question': 'Por favor ingresa una pregunta.',
+            'no_modules_found': 'No se encontraron módulos para tu cuenta. Por favor contacta soporte.',
+            'student_not_found': 'ID de estudiante \'{student_id}\' no encontrado en la base de datos',
+            'invalid_code': 'Código inválido para el estudiante {student_id}',
+            'auth_successful': 'Autenticación exitosa',
+            'auth_required': 'Autenticación de estudiante requerida',
+            'student_data_missing': 'Datos del estudiante no cargados',
             
-            # Setup Messages
-            'api_key_not_found': '¡Clave API de OpenAI no encontrada!',
-            'add_api_key': 'Por favor agrega tu clave API de OpenAI al archivo .env:',
-            'looking_for_files': 'Buscando archivos PDF y DOCX en: {folder}',
-            'supported_formats': 'Formatos soportados: PDF, DOCX',
+            # Status Messages
+            'database_connected': 'Base de Datos Conectada',
+            'database_not_loaded': 'Base de Datos No Cargada',
+            'ai_service_connected': 'Servicio IA Conectado',
+            'ai_service_unavailable': 'Servicio IA No Disponible',
             
-            # File Operations
-            'looking_in': 'Buscando en: {folder}',
-            'data_folder_not_found': 'Carpeta de datos no encontrada: {folder}',
-            'no_supported_docs': 'No se encontraron documentos soportados en {folder}. Archivos encontrados: {files}',
-            'loaded_docs_status': '{success}/{total} documentos cargados. {failed} fallaron.',
-            'all_docs_loaded': '{success}/{total} documentos cargados exitosamente',
-            'failed_to_load': 'Falló la carga de todos los documentos. Errores: {errors}',
+            # Welcome Screen
+            'ethics_document_help': 'Ayuda con Documentos de Ética',
+            'ethics_help_desc': 'Obtén asistencia con documentos y directrices relacionados con ética',
+            'coursework_help': 'Ayuda con Tareas Universitarias',
+            'coursework_help_desc': 'Obtén ayuda con tus materiales de tareas específicos',
+            
+            # Ethics
+            'ethics_guidance': 'Orientación Ética',
+            'ethics_document': 'Documento de Ética',
+            'about_ethics_document': 'Acerca de este Documento de Ética',
+            'ethics_assistant_usage': 'Cómo Usar este Asistente de Ética',
+            'ethics_examples': 'Puedes hacer preguntas como:',
+            'ethics_example_1': '¿Cuáles son los principales principios éticos discutidos en este documento?',
+            'ethics_example_2': '¿Cómo define este documento el comportamiento ético?',
+            'ethics_example_3': '¿Qué orientación proporciona esto para [situación específica]?',
+            'ethics_example_4': '¿Puedes resumir los conceptos éticos clave cubiertos?',
+            'ethics_tips': 'Consejos:',
+            'ethics_tip_1': 'Sé específico sobre la orientación ética que buscas',
+            'ethics_tip_2': 'Pregunta sobre conceptos, principios o situaciones mencionados en el documento',
+            'ethics_tip_3': 'Solicita ejemplos o aplicaciones de principios éticos',
+            
+            # Progress and Features
+            'step_label': 'Paso {current} de {total}',
+            'welcome_features': 'Características Destacadas',
+            'feature_ethics_title': 'Orientación Ética',
+            'feature_ethics_desc': 'Accede a orientación ética integral basada en políticas universitarias',
+            'feature_coursework_title': 'Soporte de Tareas',
+            'feature_coursework_desc': 'Obtén ayuda personalizada con tus materiales de módulo y tareas',
+            'feature_secure_title': 'Acceso Seguro',
+            'feature_secure_desc': 'La autenticación de estudiante asegura que solo accedas a tus propios materiales',
+            'feature_audio_title': 'Soporte de Audio',
+            'feature_audio_desc': 'Escucha respuestas con funcionalidad de texto a voz',
         }
+
 
 # Create global language manager instance
 language_manager = LanguageManager()
 
-def t(key: str, **kwargs) -> str:
+def t(key: str, default: str = None, **kwargs) -> str:
     """Convenient translation function"""
-    return language_manager.get_text(key, **kwargs)
+    return language_manager.get_text(key, default=default, **kwargs)
 
 def init_language_system():
     """Initialize language system in session state"""
@@ -450,12 +649,6 @@ def init_language_system():
         st.session_state.language = 'en'
     
     language_manager.current_language = st.session_state.language
-    
-    # Save translations to files on first run
-    try:
-        language_manager.save_translations()
-    except Exception as e:
-        print(f"Could not save translation files: {e}")
 
 def render_language_selector():
     """Render language selector in sidebar"""
@@ -476,118 +669,32 @@ def get_rtl_css() -> str:
     """Generate RTL CSS if needed"""
     if language_manager.is_rtl():
         return """
-      
+        <style>
+            /* RTL Support for Arabic */
+            .arabic-text, [lang="ar"] {
+                direction: rtl;
+                text-align: right;
+                font-family: 'Noto Sans Arabic', 'Arial', 'Tahoma', sans-serif !important;
+            }
+            
+            .stSelectbox > div > div {
+                direction: rtl;
+                text-align: right;
+            }
+            
+            .stTextInput > div > div > input {
+                direction: rtl;
+                text-align: right;
+            }
+            
+            .stButton > button {
+                direction: rtl;
+            }
+            
+            /* Reverse flex direction for RTL */
+            .rtl-flex {
+                flex-direction: row-reverse;
+            }
+        </style>
         """
     return ""
-
-def get_language_specific_ai_prompt(documents_info: str, combined_content: str) -> str:
-    """Generate language-specific AI prompt"""
-    current_lang = language_manager.current_language
-    
-    if current_lang == 'ar':
-        return f"""أنت محلل مستندات خبير مع إمكانية الوصول إلى مستندات متعددة. مهمتك هي البحث عبر جميع المستندات المقدمة وتقديم إجابات شاملة باللغة العربية.
-
-المستندات المتاحة:
-{documents_info}
-
-محتوى المستندات:
-{combined_content}
-
-التعليمات:
-- ابحث عبر جميع المستندات للعثور على المعلومات ذات الصلة
-- اذكر دائماً أي مستند يحتوي على المعلومات باستخدام التنسيق: **[المصدر: اسم_المستند]**
-- إذا ظهرت المعلومات في مستندات متعددة، اذكر جميع المصادر ذات الصلة
-- استخدم تنسيق markdown لسهولة القراءة
-- إذا لم يتم العثور على المعلومات في أي مستند، اذكر ذلك بوضوح
-- أعط الأولوية للمعلومات الأكثر صلة وشمولية
-- عند المقارنة أو التباين، انسب المعلومات بوضوح إلى مستندات محددة
-- كن محادثياً ولكن مهنياً
-
-تنسيق الاستجابة:
-- ابدأ بإجابة مباشرة على السؤال
-- قم بتضمين إسناد المصدر: **[المصدر: اسم_الملف]**
-- أضف تفاصيل ذات صلة مع المصادر
-- إذا كانت مستندات متعددة ذات صلة، نظم حسب المصدر أو الموضوع
-
-تذكر: اذكر دائماً مصادرك واستخدم فقط المعلومات من المستندات المقدمة."""
-    
-    elif current_lang == 'fr':
-        return f"""Vous êtes un analyste de documents expert avec accès à plusieurs documents. Votre tâche est de rechercher dans tous les documents fournis et de fournir des réponses complètes en français.
-
-DOCUMENTS DISPONIBLES :
-{documents_info}
-
-CONTENU DES DOCUMENTS :
-{combined_content}
-
-INSTRUCTIONS :
-- Recherchez dans TOUS les documents pour trouver des informations pertinentes
-- Indiquez TOUJOURS quel(s) document(s) contiennent les informations en utilisant le format : **[Source : nom_document]**
-- Si les informations apparaissent dans plusieurs documents, mentionnez toutes les sources pertinentes
-- Utilisez le formatage markdown pour une meilleure lisibilité
-- Si les informations ne sont trouvées dans aucun document, indiquez-le clairement
-- Priorisez les informations les plus pertinentes et complètes
-- Lors de comparaisons ou de contrastes, attribuez clairement les informations à des documents spécifiques
-- Soyez conversationnel mais professionnel
-
-FORMAT DE RÉPONSE :
-- Commencez par une réponse directe à la question
-- Incluez l'attribution de la source : **[Source : nom_fichier]**
-- Ajoutez des détails pertinents avec les sources
-- Si plusieurs documents sont pertinents, organisez par source ou thème
-
-Rappelez-vous : Citez toujours vos sources et n'utilisez que les informations des documents fournis."""
-    
-    elif current_lang == 'es':
-        return f"""Eres un analista de documentos experto con acceso a múltiples documentos. Tu tarea es buscar en todos los documentos proporcionados y brindar respuestas completas en español.
-
-DOCUMENTOS DISPONIBLES:
-{documents_info}
-
-CONTENIDO DE LOS DOCUMENTOS:
-{combined_content}
-
-INSTRUCCIONES:
-- Busca en TODOS los documentos para encontrar información relevante
-- SIEMPRE indica qué documento(s) contienen la información usando el formato: **[Fuente: nombre_documento]**
-- Si la información aparece en múltiples documentos, menciona todas las fuentes relevantes
-- Usa formato markdown para mejor legibilidad
-- Si no se encuentra información en ningún documento, indícalo claramente
-- Prioriza la información más relevante y completa
-- Al comparar o contrastar, atribuye claramente la información a documentos específicos
-- Sé conversacional pero profesional
-
-FORMATO DE RESPUESTA:
-- Comienza con una respuesta directa a la pregunta
-- Incluye atribución de fuente: **[Fuente: nombre_archivo]**
-- Agrega detalles relevantes con fuentes
-- Si múltiples documentos son relevantes, organiza por fuente o tema
-
-Recuerda: Siempre cita tus fuentes y usa solo información de los documentos proporcionados."""
-    
-    else:  # Default English
-        return f"""You are an expert document analyst with access to multiple documents. Your task is to search across all provided documents and provide comprehensive answers in English.
-
-AVAILABLE DOCUMENTS:
-{documents_info}
-
-DOCUMENT CONTENT:
-{combined_content}
-
-INSTRUCTIONS:
-- Search across ALL documents to find relevant information
-- ALWAYS indicate which document(s) contain the information using the format: **[Source: document_name]**
-- If information appears in multiple documents, mention all relevant sources
-- Use markdown formatting for better readability
-- If information isn't found in any document, clearly state that
-- Prioritize the most relevant and comprehensive information
-- When comparing or contrasting, clearly attribute information to specific documents
-- Be conversational but professional
-
-RESPONSE FORMAT:
-- Start with a direct answer to the question
-- Include source attribution: **[Source: filename]**
-- Add relevant details with sources
-- If multiple documents are relevant, organize by source or theme
-
-Remember: Always cite your sources and only use information from the provided documents."""

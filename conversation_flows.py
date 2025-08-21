@@ -1,23 +1,28 @@
-# conversation_flows.py - Fixed conversation flow management with proper input fields
+# conversation_flows.py - Updated conversation flow management with proper RTL support
 
 import streamlit as st
 import time
 import logging
 from typing import Dict, Any
+from localization import t, language_manager
 
 logger = logging.getLogger(__name__)
 
 class ConversationFlows:
-    """Manages conversation flows and screen rendering"""
+    """Manages conversation flows and screen rendering with full RTL translation support"""
     
     def __init__(self, ai_assistant, audio_manager):
         self.ai_assistant = ai_assistant
         self.audio_manager = audio_manager
     
     def render_student_id_input(self):
-        """Render student ID input screen - FIXED VERSION"""
-        st.markdown("### 🆔 Step 2: Enter Your Student ID")
-        st.markdown(f"Please enter your Roehampton University Student ID to continue with **{st.session_state.selected_path}** assistance.")
+        """Render student ID input screen with translation support"""
+        lang_attr = f'lang="{language_manager.current_language}"' if language_manager.current_language != 'en' else ''
+        
+        st.markdown(f'<div {lang_attr}>', unsafe_allow_html=True)
+        st.markdown(f"### 🆔 Step 2: {t('enter_student_id')}")
+        st.markdown(f"{t('student_id_help')} **{st.session_state.selected_path}** assistance.")
+        st.markdown('</div>', unsafe_allow_html=True)
         
         # Show error if exists
         if st.session_state.get('error_message'):
@@ -28,25 +33,24 @@ class ConversationFlows:
         # Create a form to ensure proper input handling
         with st.form("student_id_form"):
             student_id = st.text_input(
-                "Student ID:",
-                placeholder="e.g., A00034131",
-                help="Enter your complete Roehampton University Student ID",
-                value=""  # Ensure empty initial value
+                t('student_id_label'),
+                placeholder=t('student_id_placeholder'),
+                help=t('student_id_help'),
+                value=""
             )
             
             col1, col2 = st.columns([1, 3])
             
             with col1:
                 back_clicked = st.form_submit_button(
-                    "🔙 Back", 
+                    t('back_button'), 
                     type="secondary"
                 )
             
             with col2:
                 next_clicked = st.form_submit_button(
-                    "Next ➡️", 
-                    type="primary",
-                    disabled=False  # Don't disable in form
+                    t('next_button'), 
+                    type="primary"
                 )
         
         # Handle form submissions
@@ -63,13 +67,17 @@ class ConversationFlows:
                 st.session_state.error_message = None
                 st.rerun()
             else:
-                st.error("Please enter your Student ID before continuing.")
+                st.error(t('enter_question'))
     
     def render_code_input(self):
-        """Render access code input screen - FIXED VERSION"""
-        st.markdown("### 🔐 Step 3: Enter Your Access Code")
-        st.markdown(f"Student ID: **{st.session_state.student_id}**")
-        st.markdown("Please enter your unique access code to verify your identity.")
+        """Render access code input screen with translation support"""
+        lang_attr = f'lang="{language_manager.current_language}"' if language_manager.current_language != 'en' else ''
+        
+        st.markdown(f'<div {lang_attr}>', unsafe_allow_html=True)
+        st.markdown(f"### 🔐 Step 3: {t('enter_access_code')}")
+        st.markdown(f"{t('student_id_label')} **{st.session_state.student_id}**")
+        st.markdown(t('access_code_help'))
+        st.markdown('</div>', unsafe_allow_html=True)
         
         # Show error if exists
         if st.session_state.get('error_message'):
@@ -78,24 +86,24 @@ class ConversationFlows:
         # Create a form for proper input handling
         with st.form("access_code_form"):
             code = st.text_input(
-                "Access Code:",
+                t('access_code_label'),
                 type="password",
-                placeholder="Enter your unique code",
-                help="Enter the numerical code provided to you",
-                value=""  # Ensure empty initial value
+                placeholder=t('access_code_placeholder'),
+                help=t('access_code_help'),
+                value=""
             )
             
             col1, col2 = st.columns([1, 3])
             
             with col1:
                 back_clicked = st.form_submit_button(
-                    "🔙 Back", 
+                    t('back_button'), 
                     type="secondary"
                 )
             
             with col2:
                 verify_clicked = st.form_submit_button(
-                    "Verify ✅", 
+                    t('verify_button'), 
                     type="primary"
                 )
         
@@ -128,22 +136,34 @@ class ConversationFlows:
                     else:
                         st.session_state.conversation_step = 'module'
                     
-                    st.success(f"✅ Welcome, {st.session_state.student_id}!")
+                    st.success(f"✅ {t('auth_successful')}, {st.session_state.student_id}!")
                     time.sleep(1)
                     st.rerun()
                 else:
-                    st.session_state.error_message = message
+                    # Translate error message if it contains placeholders
+                    if 'not found' in message:
+                        translated_message = t('student_not_found', student_id=st.session_state.student_id)
+                    elif 'Invalid code' in message:
+                        translated_message = t('invalid_code', student_id=st.session_state.student_id)
+                    else:
+                        translated_message = message
+                    
+                    st.session_state.error_message = translated_message
                     st.session_state.retry_count = st.session_state.get('retry_count', 0) + 1
                     st.rerun()
             else:
-                st.error("Please enter your access code before continuing.")
+                st.error(t('enter_ethics_question'))
     
     def render_module_selection(self):
-        """Render module selection screen"""
-        st.markdown("### 📚 Step 4: Select Your Module")
-        st.markdown(f"Student ID: **{st.session_state.student_id}**")
-        st.markdown(f"Programme: **{st.session_state.student_data['programme']}**")
-        st.markdown("Choose the module you need assistance with:")
+        """Render module selection screen with translation support"""
+        lang_attr = f'lang="{language_manager.current_language}"' if language_manager.current_language != 'en' else ''
+        
+        st.markdown(f'<div {lang_attr}>', unsafe_allow_html=True)
+        st.markdown(f"### 📚 Step 4: {t('select_module')}")
+        st.markdown(f"{t('student_id_label')} **{st.session_state.student_id}**")
+        st.markdown(f"{t('programme_label')} **{st.session_state.student_data['programme']}**")
+        st.markdown(t('choose_module'))
+        st.markdown('</div>', unsafe_allow_html=True)
         
         # Import here to avoid circular imports
         from database_manager import DatabaseManager
@@ -152,8 +172,8 @@ class ConversationFlows:
         student_modules = DatabaseManager.get_student_modules(st.session_state.student_id)
         
         if not student_modules:
-            st.error("❌ No modules found for your account. Please contact support.")
-            if st.button("🔙 Back to Authentication", key="no_modules_back"):
+            st.error(f"❌ {t('no_modules_found')}")
+            if st.button(t('back_to_authentication'), key="no_modules_back"):
                 st.session_state.conversation_step = 'code'
                 st.rerun()
             return
@@ -164,7 +184,7 @@ class ConversationFlows:
             
             if len(pdfs) > 1:
                 # Multi-PDF module
-                st.markdown(f"*({len(pdfs)} documents available)*")
+                st.markdown(f"*({len(pdfs)} {t('documents_available')})*")
                 
                 # Individual PDF buttons
                 cols = st.columns(len(pdfs))
@@ -190,7 +210,7 @@ class ConversationFlows:
                 
                 # Select all button
                 if st.button(
-                    f"📚 All {module_name} Materials", 
+                    f"📚 {t('all_materials', module=module_name)}", 
                     key=f"{module_name}_all_pdfs",
                     help=f"Load all {len(pdfs)} documents together",
                     type="secondary",
@@ -201,7 +221,7 @@ class ConversationFlows:
                         'programme': pdfs[0]['programme'],
                         'pdf_file': 'multiple',
                         'coursework_type': 'All Materials',
-                        'display_name': f"All {module_name} Materials",
+                        'display_name': t('all_materials', module=module_name),
                         'is_multi_pdf': True,
                         'all_pdfs': pdfs
                     }
@@ -212,7 +232,7 @@ class ConversationFlows:
                 # Single PDF module
                 pdf_data = pdfs[0]
                 if st.button(
-                    f"Select {module_name}", 
+                    t('select_button', module=module_name), 
                     key=f"{module_name}_single",
                     help=f"Access {pdf_data['pdf_file']}",
                     use_container_width=True,
@@ -233,7 +253,7 @@ class ConversationFlows:
             st.markdown("---")
         
         # Back button
-        if st.button("🔙 Back to Authentication", 
+        if st.button(t('back_to_authentication'), 
                     type="secondary",
                     key="module_back_btn",
                     use_container_width=True):
@@ -241,36 +261,40 @@ class ConversationFlows:
             st.rerun()
     
     def render_coursework_selection(self):
-        """Render coursework selection screen"""
-        st.markdown("### 📋 Step 5: Coursework Assistance")
-        st.markdown(f"Module: **{st.session_state.selected_module['module']}**")
-        st.markdown("What type of coursework help do you need?")
+        """Render coursework selection screen with translation support"""
+        lang_attr = f'lang="{language_manager.current_language}"' if language_manager.current_language != 'en' else ''
         
-        # Coursework options
+        st.markdown(f'<div {lang_attr}>', unsafe_allow_html=True)
+        st.markdown(f"### 📋 Step 5: {t('coursework_assistance')}")
+        st.markdown(f"{t('module_label')} **{st.session_state.selected_module['module']}**")
+        st.markdown(t('coursework_help_type'))
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        # Coursework options with translations
         coursework_options = [
             {
-                'title': 'Assignment Questions',
-                'description': 'Help understanding assignment requirements and questions',
+                'title': t('assignment_questions'),
+                'description': t('assignment_questions_desc'),
                 'type': 'assignment'
             },
             {
-                'title': 'Reading Materials',
-                'description': 'Assistance with course readings and materials',
+                'title': t('reading_materials'),
+                'description': t('reading_materials_desc'),
                 'type': 'reading'
             },
             {
-                'title': 'Concepts & Theory',
-                'description': 'Explanation of key concepts and theories',
+                'title': t('concepts_theory'),
+                'description': t('concepts_theory_desc'),
                 'type': 'concepts'
             },
             {
-                'title': 'Exam Preparation',
-                'description': 'Help preparing for examinations',
+                'title': t('exam_preparation'),
+                'description': t('exam_preparation_desc'),
                 'type': 'exam'
             },
             {
-                'title': 'General Questions',
-                'description': 'Any other questions about the module',
+                'title': t('general_questions'),
+                'description': t('general_questions_desc'),
                 'type': 'general'
             }
         ]
@@ -287,19 +311,19 @@ class ConversationFlows:
                 st.rerun()
         
         # Back button
-        if st.button("🔙 Back to Modules", type="secondary", key="coursework_back"):
+        if st.button(t('back_to_modules'), type="secondary", key="coursework_back"):
             st.session_state.conversation_step = 'module'
             st.rerun()
     
     def render_chat_interface(self):
-        """Render the chat interface for coursework"""
+        """Render the chat interface for coursework with proper RTL translation support"""
         # Import here to avoid circular imports
         from document_processor import DocumentProcessor
         from session_manager import SessionManager
         
         # Load document if not already loaded
         if not st.session_state.get('current_document') and st.session_state.get('selected_module'):
-            with st.spinner("Loading your module materials..."):
+            with st.spinner(t('loading_materials')):
                 content, metadata, message = DocumentProcessor.load_document_for_module(st.session_state.selected_module)
                 if content:
                     st.session_state.current_document = {
@@ -312,16 +336,21 @@ class ConversationFlows:
                     st.error(message)
                     return
         
-        # Header
+        # Header with translations and RTL support
+        current_language = getattr(st.session_state, 'language', 'en')
+        lang_attr = f'lang="{current_language}"' if current_language != 'en' else ''
+        
+        st.markdown(f'<div {lang_attr}>', unsafe_allow_html=True)
         st.markdown(f"### 📚 {st.session_state.selected_module['module']}")
         st.markdown(f"**Coursework Type:** {st.session_state.selected_coursework['title']}")
-        st.markdown(f"**Programme:** {st.session_state.student_data['programme']}")
+        st.markdown(f"**{t('programme_label')}** {st.session_state.student_data['programme']}")
+        st.markdown('</div>', unsafe_allow_html=True)
         
         # Example questions
         self._render_example_questions()
         
-        # Chat messages
-        self._render_chat_messages()
+        # Chat messages with RTL support
+        self._render_chat_messages_with_rtl()
         
         # Chat input
         self._handle_chat_input()
@@ -330,8 +359,8 @@ class ConversationFlows:
         self._render_chat_controls()
     
     def _render_example_questions(self):
-        """Render example questions based on coursework type"""
-        with st.expander("💡 Example Questions", expanded=False):
+        """Render example questions based on coursework type with translation support"""
+        with st.expander(f"💡 {t('example_questions')}", expanded=False):
             coursework_type = st.session_state.selected_coursework['type']
             examples = {
                 'assignment': [
@@ -369,21 +398,25 @@ class ConversationFlows:
             for example in examples.get(coursework_type, examples['general']):
                 st.markdown(f"- \"{example}\"")
     
-    def _render_chat_messages(self):
-        """Render chat messages with audio support"""
+    def _render_chat_messages_with_rtl(self):
+        """Render chat messages with audio support and proper RTL translation"""
+        current_language = getattr(st.session_state, 'language', 'en')
+        lang_attr = f'lang="{current_language}"' if current_language != 'en' else ''
+        
         for i, message in enumerate(st.session_state.get('messages', [])):
             message_key = f"msg_{i}_{message.get('timestamp', time.time())}"
             
             if message["role"] == "user":
                 st.markdown(f"""
-                <div style="background: #e3f2fd; color: #000; padding: 1rem; border-radius: 10px; margin: 1rem 0; border-left: 4px solid #2196f3;">
-                    <strong>🙋 You:</strong><br>{message["content"]}
+                <div style="background: #e3f2fd; color: #000; padding: 1rem; border-radius: 10px; margin: 1rem 0; border-left: 4px solid #2196f3;" {lang_attr}>
+                    <strong>🙋 {t('you')}:</strong><br>{message["content"]}
                 </div>
                 """, unsafe_allow_html=True)
             else:
+                assistant_title = t('course_assistant')
                 st.markdown(f"""
-                <div style="background: #f1f8e9; color: #000; padding: 1rem; border-radius: 10px; margin: 1rem 0; border-left: 4px solid #4caf50;">
-                    <strong>🤖 Course Assistant:</strong><br>{message["content"]}
+                <div style="background: #f1f8e9; color: #000; padding: 1rem; border-radius: 10px; margin: 1rem 0; border-left: 4px solid #4caf50;" {lang_attr}>
+                    <strong>🤖 {assistant_title}:</strong><br>{message["content"]}
                 </div>
                 """, unsafe_allow_html=True)
                 
@@ -397,7 +430,7 @@ class ConversationFlows:
         if message_key not in st.session_state.get('audio_responses', {}):
             # Generate audio for this message
             if self.audio_manager and self.audio_manager.is_available():
-                with st.spinner('Generating audio...'):
+                with st.spinner(t('generating_audio')):
                     audio_bytes = self.audio_manager.generate_audio_response(
                         message["content"], 
                         st.session_state.get('selected_voice', 'alloy')
@@ -416,8 +449,10 @@ class ConversationFlows:
             st.markdown(audio_html, unsafe_allow_html=True)
     
     def _handle_chat_input(self):
-        """Handle chat input and response generation"""
-        if prompt := st.chat_input("Ask me about your coursework..."):
+        """Handle chat input and response generation with translation support"""
+        placeholder_text = t('chat_placeholder')
+        
+        if prompt := st.chat_input(placeholder_text):
             # Initialize messages if not exists
             if 'messages' not in st.session_state:
                 st.session_state.messages = []
@@ -430,7 +465,7 @@ class ConversationFlows:
             })
             
             # Generate AI response
-            with st.spinner("Analyzing your coursework materials..."):
+            with st.spinner(t('analyzing_materials')):
                 response = self.ai_assistant.generate_coursework_response(
                     prompt,
                     st.session_state.current_document['content'],
@@ -449,7 +484,7 @@ class ConversationFlows:
             if st.session_state.get('audio_enabled', True) and response and self.audio_manager and self.audio_manager.is_available():
                 message_key = f"msg_{len(st.session_state.messages)-1}_{ai_message['timestamp']}"
                 try:
-                    with st.spinner('Preparing audio...'):
+                    with st.spinner(t('generating_audio')):
                         audio_bytes = self.audio_manager.generate_audio_response(
                             response, 
                             st.session_state.get('selected_voice', 'alloy')
@@ -464,18 +499,18 @@ class ConversationFlows:
             st.rerun()
     
     def _render_chat_controls(self):
-        """Render chat control buttons"""
+        """Render chat control buttons with translation support"""
         from session_manager import SessionManager
         
         col1, col2, col3 = st.columns([1, 1, 2])
         
         with col1:
-            if st.button("🔄 New Session", type="secondary", key="new_session_btn"):
+            if st.button(f"🔄 {t('new_session')}", type="secondary", key="new_session_btn"):
                 SessionManager.reset_conversation()
                 st.rerun()
         
         with col2:
-            if st.button("🔙 Change Module", type="secondary", key="change_module_btn"):
+            if st.button(f"🔙 {t('change_module')}", type="secondary", key="change_module_btn"):
                 st.session_state.conversation_step = 'module'
                 st.session_state.messages = []
                 st.session_state.current_document = None
