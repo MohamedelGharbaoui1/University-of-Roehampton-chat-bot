@@ -10,7 +10,7 @@ The application has been refactored into modular components for better maintaina
 ├── main.py                 # Main application entry point
 ├── config.py              # Configuration management
 ├── session_manager.py     # Session state management
-├── database_manager.py    # Student database operations
+├── database_manager.py    # Student database operations 
 ├── document_processor.py  # Document reading and processing
 ├── ai_assistant.py        # AI response generation
 ├── audio_manager.py       # Text-to-speech functionality
